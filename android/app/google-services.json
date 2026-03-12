@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "933539030582",
+    "project_id": "sociality-8ed45",
+    "storage_bucket": "sociality-8ed45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933539030582:android:1d6f206fbbc7c10f0d9a97",
+        "android_client_info": {
+          "package_name": "com.example.sociality"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-C0u_yomUNz30PN6xns3IzsRzaoz0Wmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
