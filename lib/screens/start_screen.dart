@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+import 'package:sociality/screens/config_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -10,7 +10,7 @@ class WelcomeScreen extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
+            image: AssetImage('assets/images/background_blue.png'),
             fit: BoxFit.cover,
           ),
         ),
@@ -69,9 +69,9 @@ class WelcomeScreen extends StatelessWidget {
                       ),
 
                       featureItem(
-                        title: 'Versterk banden',
-                        subtitle: 'Leer elkaar beter kennen',
-                        icon: Icons.favorite,
+                        title: 'Debatteren',
+                        subtitle: 'Vind samen de beste oplossing',
+                        icon: Icons.record_voice_over,
                       ),
                     ],
                   ),
@@ -85,10 +85,10 @@ class WelcomeScreen extends StatelessWidget {
                   height: 42,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const HomeScreen(),
+                          builder: (context) => const ConfigScreen(),
                         ),
                       );
                     },
@@ -128,7 +128,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// reuseable item for feature icons
+// Reuseable item for feature icons
 Widget featureItem({
   required String title,
   required String subtitle,
@@ -140,13 +140,13 @@ Widget featureItem({
       children: [
         // Icon box
         Container(
-          width: 35,
-          height: 35,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: const Color(0xFFE82A91),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: Colors.white, size: 24),
+          child: Icon(icon, color: Colors.white, size: 26),
         ),
 
         const SizedBox(width: 6),
@@ -159,7 +159,7 @@ Widget featureItem({
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),

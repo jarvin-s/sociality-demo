@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 
 // import pages
 import 'screens/start_screen.dart';
+import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -37,6 +38,11 @@ class SocialityApp extends StatelessWidget {
           case '/':
             return MaterialPageRoute(
               builder: (context) => const WelcomeScreen(),
+            );
+
+          case '/config':
+            return MaterialPageRoute(
+              builder: (context) => const ConfigScreen(),
             );
 
           // Home screen
