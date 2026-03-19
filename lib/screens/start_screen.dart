@@ -17,76 +17,100 @@ class WelcomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Logo - 
+                // Logo
                 Image.asset(
                   'assets/images/logo.png',
                   width: 250,
-                  height: 250,
+                  height: 230,
                 ),
-                const SizedBox(height: 60),
+
                 // Welcome Card
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 25),
-                  padding: const EdgeInsets.all(30),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Column(
                     children: [
                       const Text(
-                        'Welkom!',
+                        'Welkom bij Sociality',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 27,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       const Text(
-                        'Verken sociale werksituaties en ontdek wat je kunt doen.',
+                        'Sociality is ontwikkeld om mensen dichter bij elkaar te brengen. Door middel van vragen en opdrachten leer je elkaar beter kennen en versterk je sociale banden in je buurt, op je werk of binnen je vereniging.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      // Next Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HomeScreen(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE91E8C),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                          ),
-                          child: const Text(
-                            'Volgende',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                      const SizedBox(height: 10),
+
+                      featureItem(
+                        title: 'Speel samen',
+                        subtitle: 'Geschikt voor 4 spelers',
+                        icon: Icons.people,
+                      ),
+
+                      featureItem(
+                        title: 'Ontdek verhalen',
+                        subtitle: 'Deel ervaringen en luister naar anderen',
+                        icon: Icons.menu_book,
+                      ),
+
+                      featureItem(
+                        title: 'Versterk banden',
+                        subtitle: 'Leer elkaar beter kennen',
+                        icon: Icons.favorite,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
+                
+                const SizedBox(height: 26),
+
+                // Next button
+                SizedBox(
+                  width: 181,
+                  height: 42,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HomeScreen(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE91E8C),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Volgende',
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 55),
+                
                 // Footer
                 const Text(
                   'Innergames Sociality ©',
@@ -102,4 +126,51 @@ class WelcomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+// reuseable item for feature icons
+Widget featureItem({
+  required String title,
+  required String subtitle,
+  required IconData icon, }) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon box
+        Container(
+          width: 35,
+          height: 35,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE82A91),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+
+        const SizedBox(width: 6),
+
+        // Texts
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 11, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
