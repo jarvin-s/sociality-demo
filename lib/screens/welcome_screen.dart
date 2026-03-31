@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sociality/screens/config_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

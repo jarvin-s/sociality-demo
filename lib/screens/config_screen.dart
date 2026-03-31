@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sociality/screens/join_screen.dart';
-import 'overview_screen.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -54,12 +52,7 @@ class ConfigScreen extends StatelessWidget {
                 subtitle: 'Organiseer een nieuw spel en nodig anderen uit om mee te doen. Je kiest de categorieën en bepaalt het tempo.',
                 icon: Icons.calendar_view_day_rounded,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OverviewScreen(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/overview');
                 },
               ),
 
