@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 
+const Color _kOverviewNavy = Color(0xFF233580);
+
 class JoinScreen extends StatelessWidget {
   const JoinScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF313131),
+      backgroundColor: _kOverviewNavy,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 25),
             child: Column(
               children: [
-                const SizedBox(height: 10),
-
-                // Logo
-                Image.asset(
-                  'assets/images/logo.png',
-                  width: 250,
-                  height: 230,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    color: Colors.white,
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
+                  ),
                 ),
+                // Logor
+                Image.asset('assets/images/logo.png', width: 250, height: 230),
 
                 // Title
                 const Text(
@@ -39,10 +46,7 @@ class JoinScreen extends StatelessWidget {
                 const Text(
                   'Voer de PIN-code in of scan de QR code om deel te nemen!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
 
                 const SizedBox(height: 0),
@@ -114,7 +118,7 @@ class JoinScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       Positioned(
                         top: 55,
                         left: 72,
