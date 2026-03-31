@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
                 left: 0,
                 right: 0,
                 child: Text(
-                  'Innergames Sociality ©',
+                  'InnerGames Sociality ©',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,

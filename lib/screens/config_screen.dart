@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -50,7 +51,12 @@ class ConfigScreen extends StatelessWidget {
               gameOption(
                 title: 'Spel hosten',
                 subtitle: 'Organiseer een nieuw spel en nodig anderen uit om mee te doen. Je kiest de categorieën en bepaalt het tempo.',
-                icon: Icons.calendar_view_day_rounded,
+                leading: SvgPicture.asset(
+                  'assets/crown.svg',
+                  width: 26,
+                  height: 24,
+                  fit: BoxFit.contain,
+                ),
                 onTap: () {
                   Navigator.pushNamed(context, '/overview');
                 },
@@ -61,7 +67,10 @@ class ConfigScreen extends StatelessWidget {
               gameOption(
                 title: 'Meedoen',
                 subtitle: 'Sluit je aan bij een bestaand spel via een PIN-code of door een QR-code te scannen!.',
-                icon: Icons.group,
+                leading: const Icon(
+                  Icons.group,
+                  color: Color(0xFFE82A91),
+                ),
                 onTap: () {
                   Navigator.pushNamed(context, '/join');
                 },
@@ -77,8 +86,9 @@ class ConfigScreen extends StatelessWidget {
 Widget gameOption({
   required String title,
   required String subtitle,
-  required IconData icon,
-  required VoidCallback onTap,}) {
+  required Widget leading,
+  required VoidCallback onTap,
+}) {
   return GestureDetector(
     onTap: onTap,
     child: Container(
@@ -98,10 +108,7 @@ Widget gameOption({
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFE82A91),
-            ),
+            child: Center(child: leading),
           ),
 
           const SizedBox(width: 15),
