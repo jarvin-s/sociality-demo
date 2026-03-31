@@ -85,12 +85,7 @@ class WelcomeScreen extends StatelessWidget {
                   height: 42,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ConfigScreen(),
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/config');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE91E8C),

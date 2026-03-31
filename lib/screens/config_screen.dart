@@ -70,10 +70,7 @@ class ConfigScreen extends StatelessWidget {
                 subtitle: 'Sluit je aan bij een bestaand spel via een PIN-code of door een QR-code te scannen!.',
                 icon: Icons.group,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const JoinScreen()),
-                  );
+                  Navigator.pushNamed(context, '/join');
                 },
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sociality/screens/home_screen.dart';
+import 'package:sociality/screens/join_screen.dart';
 import 'firebase_options.dart';
 
 // import pages
@@ -41,15 +42,22 @@ class SocialityApp extends StatelessWidget {
               builder: (context) => const HomeScreen(),
             );
 
+          // Welcome screen
           case '/welcome':
             return MaterialPageRoute(
               builder: (context) => const WelcomeScreen(),
             );
 
-          // Welcome screen
+          // Config screen
           case '/config':
             return MaterialPageRoute(
               builder: (context) => const ConfigScreen(),
+            );
+
+          // Join screen
+          case '/join':
+            return MaterialPageRoute(
+              builder: (context) => const JoinScreen(),
             );
 
           // Overview screen
