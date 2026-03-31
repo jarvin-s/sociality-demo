@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sociality/screens/join_screen.dart';
-import 'home_screen.dart';
+import 'overview_screen.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -57,7 +57,7 @@ class ConfigScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const HomeScreen(),
+                      builder: (context) => const OverviewScreen(),
                     ),
                   );
                 },

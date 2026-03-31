@@ -108,17 +108,6 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 55),
-                
-                // Footer
-                const Text(
-                  'Innergames Sociality ©',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
               ],
             ),
           ),
