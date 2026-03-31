@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sociality/screens/home_screen.dart';
+import 'package:sociality/screens/join_screen.dart';
 import 'firebase_options.dart';
 
 // import pages
-import 'screens/start_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/config_screen.dart';
+import 'screens/overview_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,16 +36,34 @@ class SocialityApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
 
-          // Welcome screen
+          // Home screen
           case '/':
+            return MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+            );
+
+          // Welcome screen
+          case '/welcome':
             return MaterialPageRoute(
               builder: (context) => const WelcomeScreen(),
             );
 
-          // Home screen
-          case '/home':
+          // Config screen
+          case '/config':
             return MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
+              builder: (context) => const ConfigScreen(),
+            );
+
+          // Join screen
+          case '/join':
+            return MaterialPageRoute(
+              builder: (context) => const JoinScreen(),
+            );
+
+          // Overview screen
+          case '/overview':
+            return MaterialPageRoute(
+              builder: (context) => const OverviewScreen(),
             );
 
           default:
