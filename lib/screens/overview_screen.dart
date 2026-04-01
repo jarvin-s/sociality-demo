@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sociality/screens/participant_screen.dart';
 
 const Color _kOverviewNavy = Color(0xFF233580);
 
@@ -69,89 +70,19 @@ class OverviewScreen extends StatelessWidget {
                 _SituationCard(
                   title: _situations[i].title,
                   placeholderIcon: _situations[i].placeholderIcon,
-                  onTap: () => _showStoryOptions(context, _situations[i].title),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const ParticipantScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ],
           ),
         ),
       ),
-    );
-  }
-
-  void _showStoryOptions(BuildContext context, String storyTitle) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext modalContext) => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              storyTitle,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C3E7E),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE91E63),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.games, color: Colors.white),
-              ),
-              title: const Text(
-                'Spel hosten',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: const Text('Start een nieuw spel als host'),
-              onTap: () {
-                Navigator.pop(modalContext);
-                _createGame(context, storyTitle);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C3E7E),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.login, color: Colors.white),
-              ),
-              title: const Text(
-                'Deelnemen aan spel',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: const Text('Voer een PIN in om deel te nemen'),
-              onTap: () {
-                Navigator.pop(modalContext);
-                Navigator.pushNamed(context, '/join-pin');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _createGame(BuildContext context, String storyTitle) {
-    Navigator.pushNamed(
-      context,
-      '/host-name-entry',
-      arguments: {
-        'storyTitle': storyTitle,
-      },
     );
   }
 }
