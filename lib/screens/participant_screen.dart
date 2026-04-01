@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sociality/screens/story_play_screen.dart';
 
 const Color _kParticipantNavy = Color(0xFF2A337E);
@@ -11,6 +12,9 @@ class ParticipantScreen extends StatelessWidget {
 
   static const String _gameCode = '3FD21';
   static const int _participantCount = 3;
+
+  /// Payload for scanners; keep in sync with [_gameCode].
+  static String get _joinQrPayload => 'sociality://join?code=$_gameCode';
   static const List<String> _participants = [
     'Jij (Host)',
     'Test 1',
@@ -83,6 +87,40 @@ class ParticipantScreen extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: 4,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Scan om mee te doen',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: QrImageView(
+                          data: _joinQrPayload,
+                          version: QrVersions.auto,
+                          size: 168,
+                          backgroundColor: Colors.white,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Color(0xFF2A337E),
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Color(0xFF2A337E),
                           ),
                         ),
                       ),
