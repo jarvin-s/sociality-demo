@@ -16,10 +16,10 @@ class _JoinScreenState extends State<JoinScreen> {
   void _attemptJoin(String code) {
     if (code.isNotEmpty) {
       debugPrint('Joining game with code: $code');
-      // You can send this code to your database/backend here
+      // Possible to send this to firebase
       Navigator.pushNamed(context, '/home');
     } else {
-      // Show a simple error if the user clicks 'Meedoen' with an empty PIN
+      // Show simple error if user attemps to join with empty PIN
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Voer eerst een geldige code in!')),
       );
@@ -172,7 +172,7 @@ class _JoinScreenState extends State<JoinScreen> {
                                       final String? code = capture.barcodes.first.rawValue;
                                       if (code != null) {
                                         _hasScanned = true;
-                                        _attemptJoin(code); // Uses the same logic as the button!
+                                        _attemptJoin(code);
                                       }
                                     },
                                   ),
