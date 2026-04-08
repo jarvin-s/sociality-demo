@@ -76,29 +76,54 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 26),
+                const SizedBox(height: 30),
 
                 // Next button
-                SizedBox(
-                  width: 181,
-                  height: 42,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/config');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE91E8C),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: const Text(
-                      'Volgende',
-                      style: TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/config');
+                  },
+                  child: SizedBox(
+                    width: 190,
+                    height: 42,
+                    child: Stack(
+                      children: [
+                        // Shadow layer
+                        Positioned(
+                          bottom: 0,
+                          left: 3,
+                          right: 0,
+                          child: Container(
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 182, 6, 100),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                          ),
+                        ),
+                        // Main button layer
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 3,
+                          child: Container(
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE82A91),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Volgende',
+                              style: TextStyle(
+                                fontSize: 23,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
