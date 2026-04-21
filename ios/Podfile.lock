@@ -65,8 +65,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Firebase: 065f2bb395062046623036d8e6dc857bc2521d56
-  firebase_core: 8f0a8c3aca22e29012e419ee18109b4aa021f777
-  firebase_database: 30ecb50c688c9e7aa4ddbb3dfc9468aa9cb70fcf
+  firebase_core: afac1aac13c931e0401c7e74ed1276112030efab
+  firebase_database: 4b0181cd5e1477c8c321e1cc6bbf07a55bcc05fa
   FirebaseAppCheckInterop: 4bade10286cc977e516f75d2d8312cbdfa534789
   FirebaseCore: 428912f751178b06bef0a1793effeb4a5e09a9b8
   FirebaseCoreInternal: b321eafae5362113bc182956fafc9922cfc77b72
@@ -76,6 +76,6 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   leveldb-library: cc8b8f8e013647a295ad3f8cd2ddf49a6f19be19
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1
 
 COCOAPODS: 1.16.2
