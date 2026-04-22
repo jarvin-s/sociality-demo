@@ -37,6 +37,18 @@ class _OverviewScreenState extends State<OverviewScreen> {
     _storiesFuture = _fetchStoryTitles();
   }
 
+  static String? _titleFromStoryJson(Map<String, dynamic> raw) {
+    final starting = raw['startingCard'];
+    if (starting is Map) {
+      final m = Map<String, dynamic>.from(starting);
+      final t = m['title'];
+      if (t is String && t.trim().isNotEmpty) return t.trim();
+    }
+    final name = raw['name'];
+    if (name is String && name.trim().isNotEmpty) return name.trim();
+    return null;
+  }
+
   static Future<List<_SituationItem>> _fetchStoryTitles() async {
     final response = await http.get(_storiesListUri());
     if (response.statusCode != 200) {
@@ -48,12 +60,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
     }
     final items = <_SituationItem>[];
     for (final raw in decoded) {
-      if (raw is! Map<String, dynamic>) continue;
-      final starting = raw['startingCard'];
-      if (starting is! Map<String, dynamic>) continue;
-      final title = starting['title'];
-      if (title is! String || title.trim().isEmpty) continue;
-      items.add(_SituationItem(title: title.trim()));
+      if (raw is! Map) continue;
+      final title = _titleFromStoryJson(Map<String, dynamic>.from(raw));
+      if (title == null) continue;
+      items.add(_SituationItem(title: title));
     }
     return items;
   }
