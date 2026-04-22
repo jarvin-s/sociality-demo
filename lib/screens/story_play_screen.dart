@@ -1,117 +1,482 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 const Color _kStoryNavy = Color(0xFF29367C);
 const Color _kStoryPanelGray = Color(0xFF333333);
 const Color _kStoryPink = Color(0xFFE4318C);
 const Color _kStoryCardBeige = Color(0xFFF5E9DF);
+const Color _kStorySelectedBorder = Color(0xFF2ECC71);
 
-class StoryPlayScreen extends StatelessWidget {
+enum _GamePhase { choosing, results, debateIntro, debate, revote, finalResult }
+
+class StoryPlayScreen extends StatefulWidget {
   const StoryPlayScreen({super.key});
+
+  @override
+  State<StoryPlayScreen> createState() => _StoryPlayScreenState();
+}
+
+class _StoryPlayScreenState extends State<StoryPlayScreen>
+    with TickerProviderStateMixin {
+  _GamePhase _phase = _GamePhase.choosing;
+  int? _selectedChoice;
+  int? _revoteChoice;
+
+  final int _votesA = 2;
+  final int _votesB = 3;
+
+  static const int _debateDuration = 90;
+  int _timerSeconds = _debateDuration;
+  Timer? _debateTimer;
+
+  // Animation for the debate intro image
+  late final AnimationController _introController;
+  late final Animation<Offset> _introSlide;
 
   static const String _title = 'HET SKATEPARK: DE START';
   static const String _body =
       'Jongeren in een middelgroot drop willen hun skatebaan uitbreiden met een overkapping en bankjes. De baan aan velden. Het is een populaire hangplek. Dat zorgt soms voor overlast door brommers, harde muziek en af en toe signalen van drugsgebruik of -dealen';
 
-  static const String _choicePrompt = 'Wat doe je?';
   static const String _choiceA =
       'Je richt je eerst op gesprekken met de jongeren. Speel kaart 1A.';
   static const String _choiceB =
       'Je gaat voor draagvlak en richt je op het verzet in de buurt. Speel kaart 1B.';
 
   @override
+  void initState() {
+    super.initState();
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _introSlide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _introController, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _debateTimer?.cancel();
+    _introController.dispose();
+    super.dispose();
+  }
+
+  void _startDebate() {
+    setState(() => _phase = _GamePhase.debateIntro);
+    _introController.forward();
+    // After 2.5s slide the image back out, then show debate UI
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (!mounted) return;
+      _introController.reverse().then((_) {
+        if (!mounted) return;
+        setState(() {
+          _phase = _GamePhase.debate;
+          _timerSeconds = _debateDuration;
+        });
+        _debateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (!mounted) return;
+          setState(() => _timerSeconds--);
+          if (_timerSeconds <= 0) {
+            timer.cancel();
+            setState(() => _phase = _GamePhase.revote);
+          }
+        });
+      });
+    });
+  }
+
+  void _skipDebate() {
+    _debateTimer?.cancel();
+    setState(() => _phase = _GamePhase.revote);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kStoryNavy,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                color: Colors.white,
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              ),
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    color: Colors.white,
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+                    decoration: BoxDecoration(
+                      color: _kStoryPanelGray,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          _title,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: _kStoryPink,
+                            height: 1.25,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _body,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.45,
+                            color: Colors.white.withValues(alpha: 0.98),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Expanded(child: SizedBox.shrink()),
+                _buildBottomPanel(context),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+          ),
+
+          // Debate intro image overlay
+          if (_phase == _GamePhase.debateIntro)
+            SlideTransition(
+              position: _introSlide,
               child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-                decoration: BoxDecoration(
-                  color: _kStoryPanelGray,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      _title,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: _kStoryPink,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      _body,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.45,
-                        color: Colors.white.withValues(alpha: 0.98),
-                      ),
-                    ),
-                  ],
+                color: _kStoryNavy,
+                child: Image.asset(
+                  'assets/images/debat.png',
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
                 ),
               ),
             ),
-            const Expanded(child: SizedBox.shrink()),
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: _kStoryCardBeige,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                22,
-                22,
-                22,
-                22 + MediaQuery.paddingOf(context).bottom,
-              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomPanel(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: _kStoryCardBeige,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        22,
+        22,
+        22,
+        22 + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: switch (_phase) {
+        _GamePhase.choosing || _GamePhase.debateIntro => _buildChoosingPanel(),
+        _GamePhase.results => _buildResultsPanel(),
+        _GamePhase.debate => _buildDebatePanel(),
+        _GamePhase.revote => _buildRevotePanel(),
+        _GamePhase.finalResult => _buildFinalResultPanel(),
+      },
+    );
+  }
+
+  Widget _buildChoosingPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _selectedChoice != null ? 'Wachten op andere spelers...' : 'Wat doe je?',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: _selectedChoice != null ? Colors.black54 : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _StoryChoiceButton(
+          label: _choiceA,
+          isSelected: _selectedChoice == 0,
+          isDisabled: _selectedChoice != null && _selectedChoice != 0,
+          onPressed: _selectedChoice == null
+              ? () => setState(() => _selectedChoice = 0)
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _StoryChoiceButton(
+          label: _choiceB,
+          isSelected: _selectedChoice == 1,
+          isDisabled: _selectedChoice != null && _selectedChoice != 1,
+          onPressed: _selectedChoice == null
+              ? () => setState(() => _selectedChoice = 1)
+              : null,
+        ),
+        if (_selectedChoice != null) ...[
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => setState(() => _phase = _GamePhase.results),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black54,
+              side: const BorderSide(color: Colors.black26),
+            ),
+            child: const Text('🧪 Simuleer stemresultaat'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildResultsPanel() {
+    final total = _votesA + _votesB;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Stemresultaat',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: 16),
+        _VoteBar(label: 'Kaart 1A', votes: _votesA, total: total, color: _kStoryPink),
+        const SizedBox(height: 10),
+        _VoteBar(label: 'Kaart 1B', votes: _votesB, total: total, color: _kStoryNavy),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.orange.shade300),
+          ),
+          child: const Text(
+            'Stemmen zijn bijna gelijk verdeeld! Start een debatronde.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _startDebate,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kStoryPink,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text(
+            'Start debatronde',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDebatePanel() {
+    final double progress = _timerSeconds / _debateDuration;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header row: DEBAT label + circular timer
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    _choicePrompt,
+                    'DEBAT',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: _kStoryPink,
+                      letterSpacing: 1,
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  _StoryChoiceButton(
-                    label: _choiceA,
-                    onPressed: () {},
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Omdat de antwoorden dicht bij elkaar liggen, gaan we een debat voeren. Per groep leg je uit waarom jouw keuze de meest logische is. Daarna stemmen jullie opnieuw.',
+                    style: TextStyle(fontSize: 14, height: 1.45, color: Colors.black87),
                   ),
-                  const SizedBox(height: 12),
-                  _StoryChoiceButton(
-                    label: _choiceB,
-                    onPressed: () {},
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 5,
+                    backgroundColor: Colors.black12,
+                    valueColor: AlwaysStoppedAnimation(
+                      _timerSeconds <= 10 ? Colors.red : _kStoryNavy,
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      '$_timerSeconds',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _timerSeconds <= 10 ? Colors.red : _kStoryNavy,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+        // Cards shown as reference (not tappable)
+        const Text(
+          'Wat doe je?',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: 12),
+        _StoryChoiceButton(label: _choiceA, isSelected: false, isDisabled: true, onPressed: null),
+        const SizedBox(height: 10),
+        _StoryChoiceButton(label: _choiceB, isSelected: false, isDisabled: true, onPressed: null),
+        const SizedBox(height: 14),
+        OutlinedButton(
+          onPressed: _skipDebate,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.black54,
+            side: const BorderSide(color: Colors.black26),
+          ),
+          child: const Text('Overslaan'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRevotePanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _revoteChoice != null ? 'Wachten op andere spelers...' : 'Stem opnieuw!',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: _revoteChoice != null ? Colors.black54 : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _StoryChoiceButton(
+          label: _choiceA,
+          isSelected: _revoteChoice == 0,
+          isDisabled: _revoteChoice != null && _revoteChoice != 0,
+          onPressed: _revoteChoice == null
+              ? () => setState(() => _revoteChoice = 0)
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _StoryChoiceButton(
+          label: _choiceB,
+          isSelected: _revoteChoice == 1,
+          isDisabled: _revoteChoice != null && _revoteChoice != 1,
+          onPressed: _revoteChoice == null
+              ? () => setState(() => _revoteChoice = 1)
+              : null,
+        ),
+        if (_revoteChoice != null) ...[
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => setState(() => _phase = _GamePhase.finalResult),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black54,
+              side: const BorderSide(color: Colors.black26),
+            ),
+            child: const Text('🧪 Simuleer eindresultaat'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFinalResultPanel() {
+    final winner = _revoteChoice == 0 ? 'Kaart 1A' : 'Kaart 1B';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Eindresultaat',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _kStoryPink,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'De groep kiest: $winner',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VoteBar extends StatelessWidget {
+  const _VoteBar({
+    required this.label,
+    required this.votes,
+    required this.total,
+    required this.color,
+  });
+
+  final String label;
+  final int votes;
+  final int total;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: total == 0 ? 0 : votes / total,
+              minHeight: 20,
+              backgroundColor: Colors.black12,
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('$votes', style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }
@@ -119,38 +484,58 @@ class StoryPlayScreen extends StatelessWidget {
 class _StoryChoiceButton extends StatelessWidget {
   const _StoryChoiceButton({
     required this.label,
+    required this.isSelected,
+    required this.isDisabled,
     required this.onPressed,
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final bool isSelected;
+  final bool isDisabled;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: _kStoryPink,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 88),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Center(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    height: 1.35,
-                  ),
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isDisabled ? 0.35 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: _kStoryPink,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(color: _kStorySelectedBorder, width: 3)
+                  : null,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 88),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 22),
+                    ],
+                  ],
                 ),
               ),
             ),

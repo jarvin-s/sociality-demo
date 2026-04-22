@@ -22,12 +22,12 @@ class WelcomeScreen extends StatelessWidget {
                 Image.asset(
                   'assets/images/logo.png',
                   width: 250,
-                  height: 230,
+                  height: 200,
                 ),
 
                 // Welcome Card
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.symmetric(horizontal: 22),
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -47,10 +47,10 @@ class WelcomeScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       const Text(
                         'Sociality is ontwikkeld om mensen dichter bij elkaar te brengen. Door middel van vragen en opdrachten leer je elkaar beter kennen en versterk je sociale banden in je buurt, op je werk of binnen je vereniging.',
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.left,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black87,
+                          color: Colors.black,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -72,11 +72,23 @@ class WelcomeScreen extends StatelessWidget {
                         subtitle: 'Vind samen de beste oplossing',
                         icon: Icons.record_voice_over,
                       ),
+
+                      const SizedBox(height: 20),
+
+                      const Text(
+                        '*Fysiek bordspel is nodig om deze applicatie te gebruiken.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 
-                const SizedBox(height: 30),
+                const SizedBox(height: 40),
 
                 // Next button
                 GestureDetector(
@@ -142,7 +154,7 @@ Widget featureItem({
   required String subtitle,
   required IconData icon, }) {
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
+    padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,10 +163,10 @@ Widget featureItem({
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: const Color(0xFFE82A91),
+            color: const Color(0xFFFFFFFF),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: Colors.white, size: 26),
+          child: Icon(icon, color: const Color(0xFFE82A91), size: 26),
         ),
 
         const SizedBox(width: 6),
