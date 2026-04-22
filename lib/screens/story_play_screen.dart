@@ -4,9 +4,17 @@ const Color _kStoryNavy = Color(0xFF29367C);
 const Color _kStoryPanelGray = Color(0xFF333333);
 const Color _kStoryPink = Color(0xFFE4318C);
 const Color _kStoryCardBeige = Color(0xFFF5E9DF);
+const Color _kStorySelectedBorder = Color(0xFF2ECC71);
 
-class StoryPlayScreen extends StatelessWidget {
+class StoryPlayScreen extends StatefulWidget {
   const StoryPlayScreen({super.key});
+
+  @override
+  State<StoryPlayScreen> createState() => _StoryPlayScreenState();
+}
+
+class _StoryPlayScreenState extends State<StoryPlayScreen> {
+  int? _selectedChoice;
 
   static const String _title = 'HET SKATEPARK: DE START';
   static const String _body =
@@ -88,23 +96,35 @@ class StoryPlayScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    _choicePrompt,
+                  Text(
+                    _selectedChoice != null
+                        ? 'Wachten op andere spelers...'
+                        : _choicePrompt,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: _selectedChoice != null
+                          ? Colors.black54
+                          : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 18),
                   _StoryChoiceButton(
                     label: _choiceA,
-                    onPressed: () {},
+                    isSelected: _selectedChoice == 0,
+                    isDisabled: _selectedChoice != null && _selectedChoice != 0,
+                    onPressed: _selectedChoice == null
+                        ? () => setState(() => _selectedChoice = 0)
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   _StoryChoiceButton(
                     label: _choiceB,
-                    onPressed: () {},
+                    isSelected: _selectedChoice == 1,
+                    isDisabled: _selectedChoice != null && _selectedChoice != 1,
+                    onPressed: _selectedChoice == null
+                        ? () => setState(() => _selectedChoice = 1)
+                        : null,
                   ),
                 ],
               ),
@@ -119,38 +139,58 @@ class StoryPlayScreen extends StatelessWidget {
 class _StoryChoiceButton extends StatelessWidget {
   const _StoryChoiceButton({
     required this.label,
+    required this.isSelected,
+    required this.isDisabled,
     required this.onPressed,
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final bool isSelected;
+  final bool isDisabled;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: _kStoryPink,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 88),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Center(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    height: 1.35,
-                  ),
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isDisabled ? 0.35 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: _kStoryPink,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(color: _kStorySelectedBorder, width: 3)
+                  : null,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 88),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 22),
+                    ],
+                  ],
                 ),
               ),
             ),
