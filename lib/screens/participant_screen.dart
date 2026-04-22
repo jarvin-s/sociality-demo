@@ -15,7 +15,6 @@ class ParticipantScreen extends StatelessWidget {
   static const String _gameCode = '3FD21';
   static const int _participantCount = 3;
 
-  /// Payload for scanners; keep in sync with [_gameCode].
   static String get _joinQrPayload => 'sociality://join?code=$_gameCode';
 
   static const List<String> _otherParticipants = [
