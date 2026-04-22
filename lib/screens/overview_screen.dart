@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:sociality/screens/participant_screen.dart';
+import 'package:sociality/screens/host_name_screen.dart';
 
 const Color _kOverviewNavy = Color(0xFF233580);
 
@@ -159,7 +159,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (context) => const ParticipantScreen(),
+                              builder: (context) => HostNameScreen(
+                                situationTitle: situations[i].title,
+                              ),
                             ),
                           );
                         },
