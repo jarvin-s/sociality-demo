@@ -8,21 +8,26 @@ const Color _kParticipantNavy = Color(0xFF2A337E);
 const Color _kParticipantPink = Color(0xFFE9338F);
 
 class ParticipantScreen extends StatelessWidget {
-  const ParticipantScreen({super.key});
+  const ParticipantScreen({super.key, required this.hostName});
+
+  final String hostName;
 
   static const String _gameCode = '3FD21';
   static const int _participantCount = 3;
 
   /// Payload for scanners; keep in sync with [_gameCode].
   static String get _joinQrPayload => 'sociality://join?code=$_gameCode';
-  static const List<String> _participants = [
-    'Jij (Host)',
+
+  static const List<String> _otherParticipants = [
     'Test 1',
     'Test 2',
   ];
 
   @override
   Widget build(BuildContext context) {
+    final hostLabel = '$hostName (Host)';
+    final participants = <String>[hostLabel, ..._otherParticipants];
+
     return Scaffold(
       backgroundColor: _kParticipantNavy,
       body: SafeArea(
@@ -160,7 +165,7 @@ class ParticipantScreen extends StatelessWidget {
                         alignment: WrapAlignment.center,
                         spacing: 12,
                         runSpacing: 10,
-                        children: _participants
+                        children: participants
                             .map(
                               (name) => Text(
                                 name,

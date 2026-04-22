@@ -16,10 +16,8 @@ class _JoinScreenState extends State<JoinScreen> {
   void _attemptJoin(String code) {
     if (code.isNotEmpty) {
       debugPrint('Joining game with code: $code');
-      // Possible to send this to firebase
       Navigator.pushNamed(context, '/home');
     } else {
-      // Show simple error if user attemps to join with empty PIN
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Voer eerst een geldige code in!')),
       );
@@ -65,7 +63,6 @@ class _JoinScreenState extends State<JoinScreen> {
 
                 const SizedBox(height: 25),
 
-                // PIN box (hidden when scanning)
                 AnimatedSize(
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.easeInOut,
