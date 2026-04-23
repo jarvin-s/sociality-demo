@@ -17,7 +17,7 @@ class ConfigScreen extends StatelessWidget {
 
               // Image
               Image.asset(
-                'assets/images/logo.png', // change if needed
+                'assets/images/logo.png',
                 width: 250,
                 height: 230,
               ),
@@ -48,32 +48,28 @@ class ConfigScreen extends StatelessWidget {
               const SizedBox(height: 40),
 
               // Buttons
-              gameOption(
+              GameOptionButton(
                 title: 'Spel hosten',
-                subtitle: 'Organiseer een nieuw spel en nodig anderen uit om mee te doen. Je kiest de categorieën en bepaalt het tempo.',
+                subtitle: 'Organiseer een nieuw spel en nodig anderen uit om mee te doen.',
                 leading: SvgPicture.asset(
                   'assets/crown.svg',
                   width: 26,
                   height: 24,
                   fit: BoxFit.contain,
                 ),
-                onTap: () {
-                  Navigator.pushNamed(context, '/overview');
-                },
+                onTap: () => Navigator.pushNamed(context, '/overview'),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
 
-              gameOption(
+              GameOptionButton(
                 title: 'Meedoen',
-                subtitle: 'Sluit je aan bij een bestaand spel via een PIN-code of door een QR-code te scannen!.',
+                subtitle: 'Sluit je aan bij een bestaand spel via een PIN-code of QR-code.',
                 leading: const Icon(
                   Icons.group,
                   color: Color(0xFFE82A91),
                 ),
-                onTap: () {
-                  Navigator.pushNamed(context, '/join');
-                },
+                onTap: () => Navigator.pushNamed(context, '/join'),
               ),
             ],
           ),
@@ -83,62 +79,116 @@ class ConfigScreen extends StatelessWidget {
   }
 }
 
-Widget gameOption({
-  required String title,
-  required String subtitle,
-  required Widget leading,
-  required VoidCallback onTap,
-}) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE82A91),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          // Icon box
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(child: leading),
-          ),
+class GameOptionButton extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final Widget leading;
+  final VoidCallback onTap;
 
-          const SizedBox(width: 15),
+  const GameOptionButton({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.leading,
+    required this.onTap,
+  });
 
-          // Texts
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+  @override
+  State<GameOptionButton> createState() => _GameOptionButtonState();
+}
+
+class _GameOptionButtonState extends State<GameOptionButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: SizedBox(
+          width: double.infinity,
+          height: 100,
+          child: Stack(
+            children: [
+              // Shadow Layer
+              Positioned(
+                bottom: 0,
+                left: 2,
+                right: 0,
+                child: Container(
+                  height: 94,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 182, 6, 100),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white,
+              ),
+              // Top Layer
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 100),
+                top: _isPressed ? 5 : 0,
+                left: 0,
+                right: _isPressed ? 0 : 5,
+                child: Container(
+                  height: 94,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE82A91),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icon box
+                      Container(
+                        width: 45,
+                        height: 45,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(child: widget.leading),
+                      ),
+                      const SizedBox(width: 15),
+                      // Texts
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

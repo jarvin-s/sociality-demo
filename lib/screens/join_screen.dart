@@ -73,7 +73,7 @@ class _JoinScreenState extends State<JoinScreen> {
                           height: 155,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -101,7 +101,7 @@ class _JoinScreenState extends State<JoinScreen> {
                                   controller: _pinController,
                                   keyboardType: TextInputType.number, // Shows the number pad
                                   textAlign: TextAlign.center,
-                                  maxLength: 4,
+                                  maxLength: 6,
                                   decoration: const InputDecoration(
                                     hintText: 'PIN-code',
                                     hintStyle: TextStyle(
@@ -135,7 +135,7 @@ class _JoinScreenState extends State<JoinScreen> {
                   height: isScanning ? 420 : 155,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: SingleChildScrollView(
                     // Prevents internal overflow during animation
@@ -153,6 +153,7 @@ class _JoinScreenState extends State<JoinScreen> {
                             color: Colors.black,
                           ),
                         ),
+
                         const SizedBox(height: 10),
 
                         if (isScanning)
@@ -249,7 +250,7 @@ class _JoinScreenState extends State<JoinScreen> {
                             height: 38,
                             decoration: BoxDecoration(
                               color: const Color.fromARGB(255, 182, 6, 100),
-                              borderRadius: BorderRadius.circular(50),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
@@ -262,7 +263,7 @@ class _JoinScreenState extends State<JoinScreen> {
                             height: 38,
                             decoration: BoxDecoration(
                               color: const Color(0xFFE82A91),
-                              borderRadius: BorderRadius.circular(50),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
                             child: const Text(
