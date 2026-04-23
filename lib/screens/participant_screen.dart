@@ -1,31 +1,143 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/story_play_screen.dart';
 
 const Color _kParticipantNavy = Color(0xFF2A337E);
 const Color _kParticipantPink = Color(0xFFE9338F);
 
-class ParticipantScreen extends StatelessWidget {
-  const ParticipantScreen({super.key, required this.hostName});
+class ParticipantScreen extends StatefulWidget {
+  const ParticipantScreen({
+    super.key,
+    required this.hostName,
+    required this.currentStory,
+  });
 
   final String hostName;
+  final int currentStory;
 
-  static const String _gameCode = '3FD21';
-  static const int _participantCount = 3;
+  @override
+  State<ParticipantScreen> createState() => _ParticipantScreenState();
+}
 
-  static String get _joinQrPayload => 'sociality://join?code=$_gameCode';
+class _ParticipantScreenState extends State<ParticipantScreen> {
+  bool _loading = true;
+  String? _error;
+  String? _gameCode;
+  List<String> _participants = const <String>[];
 
-  static const List<String> _otherParticipants = [
-    'Test 1',
-    'Test 2',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _startSession();
+  }
+
+  Future<void> _startSession() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await createGameSession(
+        currentStory: widget.currentStory,
+        hostName: widget.hostName,
+      );
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _gameCode = result.joinCode;
+        _participants = result.participantLabels ??
+            <String>['${widget.hostName} (Host)'];
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  String get _joinQrPayload => 'https://sociality-demo.vercel.app/join?code=${_gameCode ?? ''}';
 
   @override
   Widget build(BuildContext context) {
-    final hostLabel = '$hostName (Host)';
-    final participants = <String>[hostLabel, ..._otherParticipants];
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: _kParticipantNavy,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  color: Colors.white,
+                  tooltip:
+                      MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+              ),
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: _kParticipantNavy,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  color: Colors.white,
+                  tooltip:
+                      MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFE91E8C),
+                        ),
+                        onPressed: _startSession,
+                        child: const Text('Opnieuw proberen'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final code = _gameCode!;
+    final count = _participants.length;
 
     return Scaffold(
       backgroundColor: _kParticipantNavy,
@@ -69,33 +181,28 @@ class ParticipantScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _ZigzagBorderBox(
-                      strokeWidth: 3.5,
-                      period: 10,
-                      amplitude: 3.5,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _kParticipantPink,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Text(
-                          _gameCode,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 4,
-                          ),
+                    Container(
+                      width: 10,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 33, 33, 33),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        code,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 4,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     const Text(
                       'Scan om mee te doen',
                       textAlign: TextAlign.center,
@@ -105,7 +212,7 @@ class ParticipantScreen extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 25),
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -132,7 +239,7 @@ class ParticipantScreen extends StatelessWidget {
                     const SizedBox(height: 28),
                     const Text(
                       'Deelnemers',
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -141,12 +248,12 @@ class ParticipantScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '$_participantCount personen aangemeld',
-                      textAlign: TextAlign.center,
+                      '$count personen aangemeld',
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 15,
                         fontStyle: FontStyle.italic,
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: Colors.white.withOpacity(0.95),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -156,15 +263,11 @@ class ParticipantScreen extends StatelessWidget {
                         vertical: 20,
                         horizontal: 12,
                       ),
-                      decoration: BoxDecoration(
-                        color: _kParticipantPink,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
                       child: Wrap(
-                        alignment: WrapAlignment.center,
+                        alignment: WrapAlignment.start,
                         spacing: 12,
                         runSpacing: 10,
-                        children: participants
+                        children: _participants
                             .map(
                               (name) => Text(
                                 name,
@@ -241,123 +344,6 @@ class _ParticipantLogoFallback extends StatelessWidget {
   }
 }
 
-class _ZigzagBorderBox extends StatelessWidget {
-  const _ZigzagBorderBox({
-    required this.child,
-    required this.strokeWidth,
-    required this.period,
-    required this.amplitude,
-  });
-
-  final Widget child;
-  final double strokeWidth;
-  final double period;
-  final double amplitude;
-
-  @override
-  Widget build(BuildContext context) {
-    final pad = strokeWidth + amplitude;
-    return CustomPaint(
-      painter: _ZigzagRectPainter(
-        color: Colors.white,
-        strokeWidth: strokeWidth,
-        period: period,
-        amplitude: amplitude,
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(pad),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _ZigzagRectPainter extends CustomPainter {
-  _ZigzagRectPainter({
-    required this.color,
-    required this.strokeWidth,
-    required this.period,
-    required this.amplitude,
-  });
-
-  final Color color;
-  final double strokeWidth;
-  final double period;
-  final double amplitude;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final half = strokeWidth / 2;
-    final rect = Rect.fromLTWH(half, half, size.width - strokeWidth, size.height - strokeWidth);
-    final path = _buildZigzagRectPath(rect);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeJoin = StrokeJoin.miter,
-    );
-  }
-
-  Path _buildZigzagRectPath(Rect rect) {
-    final path = Path();
-    var x = rect.left;
-    var y = rect.top;
-    path.moveTo(x, y);
-
-    var bumpUp = true;
-    while (x < rect.right) {
-      final step = math.min(period, rect.right - x);
-      x += step;
-      path.lineTo(x, rect.top + (bumpUp ? -amplitude : amplitude));
-      bumpUp = !bumpUp;
-    }
-    path.lineTo(rect.right, rect.top);
-
-    bumpUp = true;
-    y = rect.top;
-    while (y < rect.bottom) {
-      final step = math.min(period, rect.bottom - y);
-      y += step;
-      path.lineTo(rect.right + (bumpUp ? amplitude : -amplitude), y);
-      bumpUp = !bumpUp;
-    }
-    path.lineTo(rect.right, rect.bottom);
-
-    bumpUp = false;
-    x = rect.right;
-    while (x > rect.left) {
-      final step = math.min(period, x - rect.left);
-      x -= step;
-      path.lineTo(x, rect.bottom + (bumpUp ? -amplitude : amplitude));
-      bumpUp = !bumpUp;
-    }
-    path.lineTo(rect.left, rect.bottom);
-
-    bumpUp = true;
-    y = rect.bottom;
-    while (y > rect.top) {
-      final step = math.min(period, y - rect.top);
-      y -= step;
-      path.lineTo(rect.left + (bumpUp ? amplitude : -amplitude), y);
-      bumpUp = !bumpUp;
-    }
-    path.lineTo(rect.left, rect.top);
-
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldRepaint(covariant _ZigzagRectPainter oldDelegate) {
-    return color != oldDelegate.color ||
-        strokeWidth != oldDelegate.strokeWidth ||
-        period != oldDelegate.period ||
-        amplitude != oldDelegate.amplitude;
-  }
-}
-
 class _StartenButton extends StatelessWidget {
   const _StartenButton({required this.onPressed});
 
@@ -376,7 +362,7 @@ class _StartenButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF8B1A50).withValues(alpha: 0.55),
+                color: const Color(0xFF8B1A50).withOpacity(0.55),
                 offset: const Offset(0, 5),
                 blurRadius: 0,
                 spreadRadius: 0,
