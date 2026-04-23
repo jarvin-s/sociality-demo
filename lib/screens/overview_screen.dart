@@ -15,8 +15,14 @@ const String _kStoriesApiProduction =
 Uri _storiesListUri() {
   const fromEnv = String.fromEnvironment('STORIES_API_URL');
   if (fromEnv.isNotEmpty) return Uri.parse(fromEnv);
-  if (kDebugMode && kIsWeb) {
-    return Uri.parse('http://localhost:8787/api/stories');
+  if (kIsWeb) {
+    final origin = Uri.base.origin;
+    final isLocal =
+        origin.contains('localhost') || origin.contains('127.0.0.1');
+    if (kDebugMode || isLocal) {
+      return Uri.parse('http://localhost:8787/api/stories');
+    }
+    return Uri.parse('$origin/api/stories');
   }
   return Uri.parse(_kStoriesApiProduction);
 }
