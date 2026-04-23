@@ -1,30 +1,16 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:sociality/api/api_config.dart';
 import 'package:sociality/screens/host_name_screen.dart';
 
 const Color _kOverviewNavy = Color(0xFF233580);
 
 const Color _kSituationPink = Color(0xFFE93D81);
 
-const String _kStoriesApiProduction =
-    'https://sociality-api-latest.onrender.com/api/stories';
-
 Uri _storiesListUri() {
-  const fromEnv = String.fromEnvironment('STORIES_API_URL');
-  if (fromEnv.isNotEmpty) return Uri.parse(fromEnv);
-  if (kIsWeb) {
-    final origin = Uri.base.origin;
-    final isLocal =
-        origin.contains('localhost') || origin.contains('127.0.0.1');
-    if (kDebugMode || isLocal) {
-      return Uri.parse('http://localhost:8787/api/stories');
-    }
-    return Uri.parse('$origin/api/stories');
-  }
-  return Uri.parse(_kStoriesApiProduction);
+  return storiesApiBaseUri().replace(path: '/api/stories', query: null);
 }
 
 class OverviewScreen extends StatefulWidget {
@@ -41,6 +27,19 @@ class _OverviewScreenState extends State<OverviewScreen> {
   void initState() {
     super.initState();
     _storiesFuture = _fetchStoryTitles();
+  }
+
+  static int? _storyIdFromJson(Map<String, dynamic> raw) {
+    for (final key in <String>['id', 'storyId', 'story_id']) {
+      final v = raw[key];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) {
+        final n = int.tryParse(v.trim());
+        if (n != null) return n;
+      }
+    }
+    return null;
   }
 
   static String? _titleFromStoryJson(Map<String, dynamic> raw) {
@@ -67,9 +66,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
     final items = <_SituationItem>[];
     for (final raw in decoded) {
       if (raw is! Map) continue;
-      final title = _titleFromStoryJson(Map<String, dynamic>.from(raw));
+      final map = Map<String, dynamic>.from(raw);
+      final storyId = _storyIdFromJson(map);
+      if (storyId == null) continue;
+      final title = _titleFromStoryJson(map);
       if (title == null) continue;
-      items.add(_SituationItem(title: title));
+      items.add(_SituationItem(storyId: storyId, title: title));
     }
     return items;
   }
@@ -167,6 +169,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             MaterialPageRoute<void>(
                               builder: (context) => HostNameScreen(
                                 situationTitle: situations[i].title,
+                                currentStory: situations[i].storyId,
                               ),
                             ),
                           );
@@ -184,8 +187,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
 }
 
 class _SituationItem {
-  const _SituationItem({required this.title});
+  const _SituationItem({required this.storyId, required this.title});
 
+  /// [story_entity.id] — sent as `currentStory` when creating a game session.
+  final int storyId;
   final String title;
 }
 

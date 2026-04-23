@@ -5,9 +5,14 @@ const Color _kHostNavy = Color(0xFF233580);
 const Color _kHostPink = Color(0xFFE93D81);
 
 class HostNameScreen extends StatefulWidget {
-  const HostNameScreen({super.key, required this.situationTitle});
+  const HostNameScreen({
+    super.key,
+    required this.situationTitle,
+    required this.currentStory,
+  });
 
   final String situationTitle;
+  final int currentStory;
 
   @override
   State<HostNameScreen> createState() => _HostNameScreenState();
@@ -28,7 +33,10 @@ class _HostNameScreenState extends State<HostNameScreen> {
     final name = _controller.text.trim();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => ParticipantScreen(hostName: name),
+        builder: (context) => ParticipantScreen(
+          hostName: name,
+          currentStory: widget.currentStory,
+        ),
       ),
     );
   }
@@ -93,11 +101,12 @@ class _HostNameScreenState extends State<HostNameScreen> {
                   style: const TextStyle(
                     fontSize: 18,
                     color: Color(0xFF1A1A2E),
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w100,
+                    fontStyle: FontStyle.italic
                   ),
                   cursorColor: _kHostPink,
                   decoration: InputDecoration(
-                    hintText: 'Bijvoorbeeld Sam',
+                    hintText: 'bijvoorbeeld: Sam',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
