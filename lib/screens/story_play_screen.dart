@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 const Color _kStoryNavy = Color(0xFF29367C);
-const Color _kStoryPanelGray = Color(0xFF333333);
 const Color _kStoryPink = Color(0xFFE4318C);
 const Color _kStoryCardBeige = Color(0xFFF5E9DF);
 const Color _kStorySelectedBorder = Color(0xFF2ECC71);
@@ -117,7 +116,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
                     decoration: BoxDecoration(
-                      color: _kStoryPanelGray,
+                      color: _kStoryCardBeige,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Column(
@@ -138,7 +137,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.45,
-                            color: Colors.white.withValues(alpha: 0.98),
+                            color: Colors.black.withValues(alpha: 0.98),
                           ),
                         ),
                       ],
