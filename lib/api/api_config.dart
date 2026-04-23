@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 const String _kProductionApiBase = 'https://sociality-api-latest.onrender.com/';
 
-
 Uri storiesApiBaseUri() {
   const fromEnv = String.fromEnvironment('STORIES_API_URL');
   if (fromEnv.isNotEmpty) {
