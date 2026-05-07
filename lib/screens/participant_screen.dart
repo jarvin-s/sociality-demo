@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sociality/api/game_session_api.dart';
@@ -22,9 +24,45 @@ class ParticipantScreen extends StatefulWidget {
 
 class _ParticipantScreenState extends State<ParticipantScreen> {
   bool _loading = true;
+  bool _startingGame = false;
   String? _error;
   String? _gameCode;
   List<String> _participants = const <String>[];
+  Timer? _pollTimer;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _beginPollingParticipants() {
+    _pollTimer?.cancel();
+    final code = _gameCode;
+    if (code == null || code.isEmpty) return;
+    final normalized = code.trim().toUpperCase();
+    _primeParticipantFetch(normalized);
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!mounted) return;
+      try {
+        final snap = await fetchGameSession(joinCode: normalized);
+        if (!mounted) return;
+        final labels = snap.participantLabels;
+        if (labels.isEmpty) return;
+        setState(() => _participants = labels);
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _primeParticipantFetch(String normalized) async {
+    try {
+      final snap = await fetchGameSession(joinCode: normalized);
+      if (!mounted) return;
+      final labels = snap.participantLabels;
+      if (labels.isEmpty) return;
+      setState(() => _participants = labels);
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -50,12 +88,36 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
             <String>['${widget.hostName} (Host)'];
         _error = null;
       });
+      _beginPollingParticipants();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  Future<void> _onStartGame() async {
+    final code = _gameCode;
+    if (code == null || code.isEmpty) return;
+    _pollTimer?.cancel();
+    setState(() => _startingGame = true);
+    try {
+      final session = await startGameSession(joinCode: code);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (context) => StoryPlayScreen(session: session),
+        ),
+        (route) => route.isFirst,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+      setState(() => _startingGame = false);
     }
   }
 
@@ -288,13 +350,8 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: _StartenButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (context) => const StoryPlayScreen(),
-                    ),
-                  );
-                },
+                isLoading: _startingGame,
+                onPressed: _startingGame ? null : _onStartGame,
               ),
             ),
           ],
@@ -345,16 +402,20 @@ class _ParticipantLogoFallback extends StatelessWidget {
 }
 
 class _StartenButton extends StatelessWidget {
-  const _StartenButton({required this.onPressed});
+  const _StartenButton({
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: isLoading ? null : onPressed,
         borderRadius: BorderRadius.circular(999),
         child: Ink(
           decoration: BoxDecoration(
@@ -373,14 +434,23 @@ class _StartenButton extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 16),
             alignment: Alignment.center,
-            child: const Text(
-              'Starten',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 26,
+                    width: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Starten',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),
