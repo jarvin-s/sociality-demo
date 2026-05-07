@@ -55,17 +55,15 @@ class SocialityApp extends StatelessWidget {
             page = const Scaffold(body: Center(child: Text('Route not found')));
         }
 
+        // Slide animation for all transitions
         return PageRouteBuilder(
           settings: settings,
-          transitionDuration: const Duration(milliseconds: 0),
+          transitionDuration: const Duration(milliseconds: 250),
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final slide =
                 Tween<Offset>(
-                  begin: const Offset(
-                    1.0,
-                    0,
-                  ),
+                  begin: const Offset(1.0, 0),
                   end: Offset.zero,
                 ).animate(
                   CurvedAnimation(

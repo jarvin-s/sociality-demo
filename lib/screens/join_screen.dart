@@ -12,6 +12,7 @@ class _JoinScreenState extends State<JoinScreen> {
   final TextEditingController _pinController = TextEditingController();
   bool isScanning = false;
   bool _hasScanned = false;
+  bool _isPressed = false;
 
   void _attemptJoin(String code) {
     if (code.isNotEmpty) {
@@ -86,7 +87,7 @@ class _JoinScreenState extends State<JoinScreen> {
                                   color: Colors.black,
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 8),
 
                               // PIN Input Field
@@ -109,7 +110,7 @@ class _JoinScreenState extends State<JoinScreen> {
                                       fontSize: 18,
                                     ),
                                     border: InputBorder.none, // Removes the default underline
-                                    counterText:"", // Hides the character counter at the bottom
+                                    counterText: "", // Hides the character counter at the bottom
                                     contentPadding: EdgeInsets.symmetric(vertical: 7),
                                   ),
                                   style: const TextStyle(
@@ -139,8 +140,7 @@ class _JoinScreenState extends State<JoinScreen> {
                   ),
                   child: SingleChildScrollView(
                     // Prevents internal overflow during animation
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Internal scroll disabled
+                    physics: const NeverScrollableScrollPhysics(), // Internal scroll disabled
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -229,54 +229,63 @@ class _JoinScreenState extends State<JoinScreen> {
 
                 const SizedBox(height: 40),
 
-                // Join button
+                // Meedoen button
                 GestureDetector(
                   onTap: () {
                     // Get the text from the PIN controller
                     String enteredPin = _pinController.text;
                     _attemptJoin(enteredPin);
                   },
-                  child: SizedBox(
-                    width: 189,
-                    height: 42,
-                    child: Stack(
-                      children: [
-                        // Shadow layer
-                        Positioned(
-                          bottom: 0,
-                          left: 3,
-                          right: 0,
-                          child: Container(
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 182, 6, 100),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        // Main button
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 3,
-                          child: Container(
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE82A91),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Text(
-                              'Meedoen',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                  onTapDown: (_) => setState(() => _isPressed = true),
+                  onTapUp: (_) => setState(() => _isPressed = false),
+                  onTapCancel: () => setState(() => _isPressed = false),
+                  child: AnimatedScale(
+                    scale: _isPressed ? 0.98 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: SizedBox(
+                      width: 189,
+                      height: 42,
+                      child: Stack(
+                        children: [
+                          // Shadow layer
+                          Positioned(
+                            bottom: 0,
+                            left: 3,
+                            right: 0,
+                            child: Container(
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 182, 6, 100),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+
+                          // Main button
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 100),
+                            top: _isPressed ? 4 : 0,
+                            left: 0,
+                            right: _isPressed ? 0 : 3,
+                            child: Container(
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE82A91),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'Meedoen',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
