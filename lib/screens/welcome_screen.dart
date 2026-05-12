@@ -80,7 +80,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 ),
 
                 // Volgende button
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 _buildNextButton(),
               ],
             ),
