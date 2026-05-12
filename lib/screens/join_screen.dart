@@ -14,6 +14,19 @@ class _JoinScreenState extends State<JoinScreen> {
   bool _hasScanned = false;
   bool _isPressed = false;
 
+  // When true, everything animates into its final position
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Wait one frame, then trigger all animations
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
   void _attemptJoin(String code) {
     if (code.isNotEmpty) {
       debugPrint('Joining game with code: $code');
@@ -42,187 +55,211 @@ class _JoinScreenState extends State<JoinScreen> {
 
                 const SizedBox(height: 10),
 
-                // Title
-                const Text(
-                  'Hoe wil je deelnemen?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                // Title + subtitle
+                AnimatedOpacity(
+                  opacity: _visible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 400),
+                  child: const Column(
+                    children: [
+                      Text(
+                        'Hoe wil je deelnemen?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Voer de PIN-code in of scan de QR code om deel te nemen!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ],
                   ),
-                ),
-
-                const SizedBox(height: 5),
-
-                // Subtitle
-                const Text(
-                  'Voer de PIN-code in of scan de QR code om deel te nemen!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
 
                 const SizedBox(height: 25),
 
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                  child: isScanning
-                      ? const SizedBox.shrink() // collapses away
-                      : Container(
-                          width: double.infinity,
-                          height: 155,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Voer uw PIN-code in',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
+                // PIN box
+                AnimatedSlide(
+                  offset: _visible ? Offset.zero : const Offset(0, 0.3),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: _visible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 400),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      child: isScanning
+                          ? const SizedBox.shrink() // collapses away
+                          : Container(
+                              width: double.infinity,
+                              height: 155,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-
-                              const SizedBox(height: 8),
-
-                              // PIN Input Field
-                              Container(
-                                width: 190,
-                                height: 35,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6E1E1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: TextField(
-                                  controller: _pinController,
-                                  keyboardType: TextInputType.number, // Shows the number pad
-                                  textAlign: TextAlign.center,
-                                  maxLength: 6,
-                                  decoration: const InputDecoration(
-                                    hintText: 'PIN-code',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFF9E9E9E),
-                                      fontSize: 18,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Voer uw PIN-code in',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
-                                    border: InputBorder.none, // Removes the default underline
-                                    counterText: "", // Hides the character counter at the bottom
-                                    contentPadding: EdgeInsets.symmetric(vertical: 7),
                                   ),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    letterSpacing: 1, // Spreads the numbers out nicely
+
+                                  const SizedBox(height: 8),
+
+                                  // PIN Input Field
+                                  Container(
+                                    width: 190,
+                                    height: 35,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE6E1E1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: TextField(
+                                      controller: _pinController,
+                                      keyboardType: TextInputType.number, // Shows the number pad
+                                      textAlign: TextAlign.center,
+                                      maxLength: 6,
+                                      decoration: const InputDecoration(
+                                        hintText: 'PIN-code',
+                                        hintStyle: TextStyle(
+                                          color: Color(0xFF9E9E9E),
+                                          fontSize: 18,
+                                        ),
+                                        border: InputBorder.none, // Removes the default underline
+                                        counterText: "", // Hides the character counter at the bottom
+                                        contentPadding: EdgeInsets.symmetric(vertical: 7),
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                        letterSpacing: 1, // Spreads the numbers out nicely
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // QR box (expands when scanning)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                  width: double.infinity,
-                  height: isScanning ? 420 : 155,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: SingleChildScrollView(
-                    // Prevents internal overflow during animation
-                    physics: const NeverScrollableScrollPhysics(), // Internal scroll disabled
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 20), // Top padding for the title
-                        const Text(
-                          'Scan QR-code',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        if (isScanning)
-                          Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: SizedBox(
-                                  width: 247,
-                                  height: 300,
-                                  child: MobileScanner(
-                                    onDetect: (capture) {
-                                      if (_hasScanned) return;
-                                      final String? code = capture.barcodes.first.rawValue;
-                                      if (code != null) {
-                                        _hasScanned = true;
-                                        _attemptJoin(code);
-                                      }
-                                    },
-                                  ),
-                                ),
+                // QR box
+                AnimatedSlide(
+                  offset: _visible ? Offset.zero : const Offset(0, 0.3),
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: _visible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 600),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      width: double.infinity,
+                      height: isScanning ? 420 : 155,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: SingleChildScrollView(
+                        // Prevents internal overflow during animation
+                        physics: const NeverScrollableScrollPhysics(), // Internal scroll disabled
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 20), // Top padding for the title
+                            const Text(
+                              'Scan QR-code',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
-                              const SizedBox(height: 12),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            if (isScanning)
+                              Column(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: SizedBox(
+                                      width: 247,
+                                      height: 300,
+                                      child: MobileScanner(
+                                        onDetect: (capture) {
+                                          if (_hasScanned) return;
+                                          final String? code = capture.barcodes.first.rawValue;
+                                          if (code != null) {
+                                            _hasScanned = true;
+                                            _attemptJoin(code);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  GestureDetector(
+                                    onTap: () => setState(() {
+                                      isScanning = false;
+                                      _hasScanned = false;
+                                    }),
+                                    child: const Padding(
+                                      padding: EdgeInsets.only(bottom: 20),
+                                      child: Text(
+                                        'Annuleren',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              // Tap to scan
                               GestureDetector(
-                                onTap: () => setState(() {
-                                  isScanning = false;
-                                  _hasScanned = false;
-                                }),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(bottom: 20),
-                                  child: Text(
-                                    'Annuleren',
+                                onTap: () => setState(() => isScanning = true),
+                                child: Container(
+                                  width: 180,
+                                  height: 54,
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD9D9D9),
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    'Tik om te scannen',
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
                                   ),
                                 ),
                               ),
-                            ],
-                          )
-                        else
-                          // Tap to scan
-                          GestureDetector(
-                            onTap: () => setState(() => isScanning = true),
-                            child: Container(
-                              width: 180,
-                              height: 54,
-                              margin: const EdgeInsets.only(bottom: 20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD9D9D9),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Tik om te scannen',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -230,61 +267,70 @@ class _JoinScreenState extends State<JoinScreen> {
                 const SizedBox(height: 40),
 
                 // Meedoen button
-                GestureDetector(
-                  onTap: () {
-                    // Get the text from the PIN controller
-                    String enteredPin = _pinController.text;
-                    _attemptJoin(enteredPin);
-                  },
-                  onTapDown: (_) => setState(() => _isPressed = true),
-                  onTapUp: (_) => setState(() => _isPressed = false),
-                  onTapCancel: () => setState(() => _isPressed = false),
-                  child: AnimatedScale(
-                    scale: _isPressed ? 0.98 : 1.0,
-                    duration: const Duration(milliseconds: 100),
-                    child: SizedBox(
-                      width: 189,
-                      height: 42,
-                      child: Stack(
-                        children: [
-                          // Shadow layer
-                          Positioned(
-                            bottom: 0,
-                            left: 3,
-                            right: 0,
-                            child: Container(
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 182, 6, 100),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-
-                          // Main button
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 100),
-                            top: _isPressed ? 4 : 0,
-                            left: 0,
-                            right: _isPressed ? 0 : 3,
-                            child: Container(
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE82A91),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Meedoen',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                AnimatedSlide(
+                  offset: _visible ? Offset.zero : const Offset(0, 1),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: _visible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 800),
+                    child: GestureDetector(
+                      onTap: () {
+                        // Get the text from the PIN controller
+                        String enteredPin = _pinController.text;
+                        _attemptJoin(enteredPin);
+                      },
+                      onTapDown: (_) => setState(() => _isPressed = true),
+                      onTapUp: (_) => setState(() => _isPressed = false),
+                      onTapCancel: () => setState(() => _isPressed = false),
+                      child: AnimatedScale(
+                        scale: _isPressed ? 0.98 : 1.0,
+                        duration: const Duration(milliseconds: 100),
+                        child: SizedBox(
+                          width: 189,
+                          height: 42,
+                          child: Stack(
+                            children: [
+                              // Shadow layer
+                              Positioned(
+                                bottom: 0,
+                                left: 3,
+                                right: 0,
+                                child: Container(
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromARGB(255, 182, 6, 100),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
-                            ),
+
+                              // Main button
+                              AnimatedPositioned(
+                                duration: const Duration(milliseconds: 100),
+                                top: _isPressed ? 4 : 0,
+                                left: 0,
+                                right: _isPressed ? 0 : 3,
+                                child: Container(
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE82A91),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    'Meedoen',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
