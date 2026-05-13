@@ -7,6 +7,13 @@ const Color _kStoryPink = Color(0xFFE4318C);
 const Color _kStoryCardBeige = Color(0xFFF5E9DF);
 const Color _kStorySelectedBorder = Color(0xFF2ECC71);
 
+class _PersonProfile {
+  const _PersonProfile({required this.name, required this.age, required this.bio});
+  final String name;
+  final int age;
+  final String bio;
+}
+
 enum _GamePhase { choosing, results, debateVote, debateVoteResult, debateIntro, debate, revote, finalResult }
 
 class StoryPlayScreen extends StatefulWidget {
@@ -36,6 +43,19 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   // Animation for the debate intro image
   late final AnimationController _introController;
   late final Animation<Offset> _introSlide;
+
+  static const List<_PersonProfile> _profiles = [
+    _PersonProfile(
+      name: 'Jayden Smits',
+      age: 16,
+      bio: 'Jayden komt elke dag na school naar het skatepark. Hij wil de baan uitbreiden met een overkapping zodat hij ook bij regen kan skaten. Hij snapt niet waarom de buurt zo moeilijk doet — voor hem is het gewoon een plek om vrienden te ontmoeten en zijn tricks te oefenen.',
+    ),
+    _PersonProfile(
+      name: 'Greet van Dijk',
+      age: 58,
+      bio: 'Greet woont al jaren vlak naast het skatepark en heeft regelmatig last van harde muziek en rondhangend volk. Ze is niet tegen de jongeren, maar vindt dat er duidelijkere afspraken moeten komen over tijden en gedrag in de buurt.',
+    ),
+  ];
 
   static const String _title = 'HET SKATEPARK: DE START';
   static const String _body =
@@ -90,6 +110,18 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     });
   }
 
+  void _showProfileSheet(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+        child: _ProfileCard(profiles: _profiles),
+      ),
+    );
+  }
+
   void _skipDebate() {
     _debateTimer?.cancel();
     setState(() => _phase = _GamePhase.revote);
@@ -127,14 +159,37 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          _title,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: _kStoryPink,
-                            height: 1.25,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                _title,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kStoryPink,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => _showProfileSheet(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: _kStoryPink.withValues(alpha: 0.18),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.people_alt_rounded,
+                                  color: _kStoryPink,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 14),
                         Text(
@@ -617,6 +672,196 @@ class _DebateVoteButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileCard extends StatefulWidget {
+  const _ProfileCard({required this.profiles});
+  final List<_PersonProfile> profiles;
+
+  @override
+  State<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<_ProfileCard> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profiles[_index];
+    const double avatarRadius = 58.0;
+    const double navyHeight = 96.0;
+
+    return Container(
+      height: 460,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            children: [
+              Container(height: navyHeight, color: _kStoryNavy),
+              Expanded(
+                child: Container(
+                  color: _kStoryCardBeige,
+                  padding: const EdgeInsets.fromLTRB(24, avatarRadius + 16, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        profile.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: _kStoryPink,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Leeftijd: ${profile.age}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'OVER ${profile.name.split(' ').first.toUpperCase()}:',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: _kStoryPink,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          profile.bio,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.55,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.fade,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 38,
+                          child: _index > 0
+                              ? GestureDetector(
+                                  onTap: () => setState(() => _index--),
+                                  child: const Icon(
+                                    Icons.chevron_left_rounded,
+                                    size: 30,
+                                    color: _kStoryPink,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(widget.profiles.length, (i) {
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: i == _index ? 20 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: i == _index
+                                      ? Colors.black87
+                                      : Colors.black38,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 38,
+                          child: _index < widget.profiles.length - 1
+                              ? GestureDetector(
+                                  onTap: () => setState(() => _index++),
+                                  child: const Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 30,
+                                    color: _kStoryPink,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ],
+          ),
+          // Close button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+          Positioned(
+            top: navyHeight - avatarRadius,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: avatarRadius * 2,
+                height: avatarRadius * 2,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _kStoryPink, width: 4),
+                  color: _kStoryNavy,
+                ),
+                child: const ClipOval(
+                  child: Icon(Icons.person, size: 64, color: Colors.white70),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
