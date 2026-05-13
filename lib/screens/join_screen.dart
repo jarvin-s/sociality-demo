@@ -14,7 +14,7 @@ class _JoinScreenState extends State<JoinScreen> {
   bool _hasScanned = false;
   bool _isPressed = false;
 
-  // When true, everything animates into its final position
+  // If true, position is final
   bool _visible = false;
 
   @override
@@ -84,7 +84,7 @@ class _JoinScreenState extends State<JoinScreen> {
 
                 // PIN box
                 AnimatedSlide(
-                  offset: _visible ? Offset.zero : const Offset(0, 0.3),
+                  offset: _visible ? Offset.zero : const Offset(0, 0.5),
                   duration: const Duration(milliseconds: 500),
                   curve: Curves.easeOutCubic,
                   child: AnimatedOpacity(
@@ -158,7 +158,7 @@ class _JoinScreenState extends State<JoinScreen> {
 
                 // QR box
                 AnimatedSlide(
-                  offset: _visible ? Offset.zero : const Offset(0, 0.3),
+                  offset: _visible ? Offset.zero : const Offset(0, 0.5),
                   duration: const Duration(milliseconds: 700),
                   curve: Curves.easeOutCubic,
                   child: AnimatedOpacity(

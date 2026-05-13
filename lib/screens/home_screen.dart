@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,6 +10,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
+
+  final _player = AudioPlayer();
 
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
@@ -36,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _player.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -62,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _navigate() {
+    _player.play(AssetSource('sounds/click.wav'));
     Navigator.pushNamed(context, '/welcome');
   }
 
@@ -80,11 +85,9 @@ class _HomeScreenState extends State<HomeScreen>
             children: [
 
               Center(
-                child:
-                FadeTransition(
+                child: FadeTransition(
                   opacity: _fadeAnim,
-                  child:
-                  ScaleTransition(
+                  child: ScaleTransition(
                     scale: _scaleAnim,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -115,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
                               height: 42,
                               child: Stack(
                                 children: [
+
                                   AnimatedPositioned(
                                     duration: const Duration(milliseconds: 100),
                                     bottom: _isPressed ? 2 : 0,
