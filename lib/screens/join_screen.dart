@@ -33,6 +33,7 @@ class _JoinScreenState extends State<JoinScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool isScanning = false;
   bool _hasScanned = false;
+  bool _qrScanned = false;
   bool _joinBusy = false;
 
   @override
@@ -78,13 +79,14 @@ class _JoinScreenState extends State<JoinScreen> {
 
     setState(() => _joinBusy = true);
     try {
-      final snapshot = await joinGameSession(joinCode: code, playerName: name);
+      final result = await joinGameSession(joinCode: code, playerName: name);
       if (!mounted) return;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (context) => GuestLobbyScreen(
             joinCode: code,
-            initialSnapshot: snapshot,
+            initialSnapshot: result.snapshot,
+            selfPlayerId: result.selfPlayerId,
           ),
         ),
       );
@@ -218,116 +220,120 @@ class _JoinScreenState extends State<JoinScreen> {
                           ),
                         ),
                 ),
-                const SizedBox(height: 16),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                  width: double.infinity,
-                  height: isScanning ? 420 : 155,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Scan QR-code',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                if (!_qrScanned) ...[
+                  const SizedBox(height: 16),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                    width: double.infinity,
+                    height: isScanning ? 420 : 155,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Scan QR-code',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (isScanning)
-                          Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: SizedBox(
-                                  width: 247,
-                                  height: 300,
-                                  child: MobileScanner(
-                                    onDetect: (capture) {
-                                      if (_hasScanned || _joinBusy) return;
-                                      final String? raw =
-                                          capture.barcodes.first.rawValue;
-                                      if (raw == null) return;
-                                      final parsed =
-                                          parseJoinCodeFromQrOrText(raw);
-                                      if (parsed == null) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Geen geldige spelcode in deze QR-code.',
+                          const SizedBox(height: 10),
+                          if (isScanning)
+                            Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: SizedBox(
+                                    width: 247,
+                                    height: 300,
+                                    child: MobileScanner(
+                                      onDetect: (capture) {
+                                        if (_hasScanned || _joinBusy) return;
+                                        final String? raw =
+                                            capture.barcodes.first.rawValue;
+                                        if (raw == null) return;
+                                        final parsed =
+                                            parseJoinCodeFromQrOrText(raw);
+                                        if (parsed == null) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Geen geldige spelcode in deze QR-code.',
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                        return;
-                                      }
-                                      setState(() {
-                                        _hasScanned = true;
-                                        _codeController.text = parsed;
-                                      });
-                                      _attemptJoin(scannedPayload: raw);
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () => setState(() {
-                                  isScanning = false;
-                                  _hasScanned = false;
-                                }),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(bottom: 20),
-                                  child: Text(
-                                    'Annuleren',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
+                                          );
+                                          return;
+                                        }
+                                        setState(() {
+                                          _hasScanned = true;
+                                          _qrScanned = true;
+                                          isScanning = false;
+                                          _codeController.text = parsed;
+                                        });
+                                        _attemptJoin(scannedPayload: raw);
+                                      },
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          )
-                        else
-                          GestureDetector(
-                            onTap: () => setState(() => isScanning = true),
-                            child: Container(
-                              width: 180,
-                              height: 54,
-                              margin: const EdgeInsets.only(bottom: 20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD9D9D9),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1,
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: () => setState(() {
+                                    isScanning = false;
+                                    _hasScanned = false;
+                                  }),
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(bottom: 20),
+                                    child: Text(
+                                      'Annuleren',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Tik om te scannen',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                              ],
+                            )
+                          else
+                            GestureDetector(
+                              onTap: () => setState(() => isScanning = true),
+                              child: Container(
+                                width: 180,
+                                height: 54,
+                                margin: const EdgeInsets.only(bottom: 20),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD9D9D9),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'Tik om te scannen',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 40),
                 Opacity(
                   opacity: _joinBusy ? 0.55 : 1,

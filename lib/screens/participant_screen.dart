@@ -27,6 +27,7 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
   bool _startingGame = false;
   String? _error;
   String? _gameCode;
+  int? _hostPlayerId;
   List<String> _participants = const <String>[];
   Timer? _pollTimer;
 
@@ -47,20 +48,35 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
       try {
         final snap = await fetchGameSession(joinCode: normalized);
         if (!mounted) return;
-        final labels = snap.participantLabels;
+        final selfId = _hostPlayerId ?? _inferHostIdFromSnapshot(snap);
+        final labels = snap.participantLabels(selfPlayerId: selfId);
         if (labels.isEmpty) return;
-        setState(() => _participants = labels);
+        setState(() {
+          if (selfId != null && _hostPlayerId == null) _hostPlayerId = selfId;
+          _participants = labels;
+        });
       } catch (_) {}
     });
+  }
+
+  int? _inferHostIdFromSnapshot(GameSessionSnapshot snap) {
+    for (final p in snap.players) {
+      if (p.isHost) return p.id;
+    }
+    return null;
   }
 
   Future<void> _primeParticipantFetch(String normalized) async {
     try {
       final snap = await fetchGameSession(joinCode: normalized);
       if (!mounted) return;
-      final labels = snap.participantLabels;
+      final selfId = _hostPlayerId ?? _inferHostIdFromSnapshot(snap);
+      final labels = snap.participantLabels(selfPlayerId: selfId);
       if (labels.isEmpty) return;
-      setState(() => _participants = labels);
+      setState(() {
+        if (selfId != null && _hostPlayerId == null) _hostPlayerId = selfId;
+        _participants = labels;
+      });
     } catch (_) {}
   }
 
@@ -84,8 +100,10 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
       setState(() {
         _loading = false;
         _gameCode = result.joinCode;
-        _participants = result.participantLabels ??
-            <String>['${widget.hostName} (Host)'];
+        _hostPlayerId = result.hostPlayerId;
+        _participants = result.participantLabels.isNotEmpty
+            ? result.participantLabels
+            : <String>['${widget.hostName} (Host, Jij)'];
         _error = null;
       });
       _beginPollingParticipants();

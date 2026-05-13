@@ -12,10 +12,12 @@ class GuestLobbyScreen extends StatefulWidget {
     super.key,
     required this.joinCode,
     required this.initialSnapshot,
+    this.selfPlayerId,
   });
 
   final String joinCode;
   final GameSessionSnapshot initialSnapshot;
+  final int? selfPlayerId;
 
   @override
   State<GuestLobbyScreen> createState() => _GuestLobbyScreenState();
@@ -75,7 +77,8 @@ class _GuestLobbyScreenState extends State<GuestLobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final labels = _snapshot.participantLabels;
+    final labels =
+        _snapshot.participantLabels(selfPlayerId: widget.selfPlayerId);
     final count = labels.length;
 
     return Scaffold(

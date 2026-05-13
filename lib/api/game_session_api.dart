@@ -67,10 +67,13 @@ Uri _gamesessionsBaseUri() {
   );
 }
 
-Uri gameSessionsJoinUri() {
+Uri gameSessionsJoinUri({String? joinCode}) {
   final root = _gamesessionsBaseUri();
   return root.replace(
     pathSegments: <String>[...root.pathSegments, 'join'],
+    queryParameters: joinCode == null || joinCode.isEmpty
+        ? null
+        : <String, String>{'joinCode': joinCode},
   );
 }
 
@@ -143,10 +146,25 @@ List<String> _participantLabelsFromJson(
 }
 
 class GameSessionCreateResult {
-  const GameSessionCreateResult({required this.joinCode, this.participantLabels});
+  const GameSessionCreateResult({
+    required this.joinCode,
+    required this.participantLabels,
+    this.hostPlayerId,
+  });
 
   final String joinCode;
-  final List<String>? participantLabels;
+  final List<String> participantLabels;
+  final int? hostPlayerId;
+}
+
+class GameSessionJoinResult {
+  const GameSessionJoinResult({
+    required this.snapshot,
+    this.selfPlayerId,
+  });
+
+  final GameSessionSnapshot snapshot;
+  final int? selfPlayerId;
 }
 
 class GameSessionPlayer {
@@ -229,15 +247,18 @@ class GameSessionSnapshot {
     );
   }
 
-  List<String> get participantLabels {
+  List<String> participantLabels({int? selfPlayerId}) {
     final sorted = List<GameSessionPlayer>.from(players)
       ..sort((a, b) {
         if (a.isHost == b.isHost) return a.name.compareTo(b.name);
         return a.isHost ? -1 : 1;
       });
-    return sorted
-        .map((p) => p.isHost ? '${p.name} (Host)' : p.name)
-        .toList();
+    return sorted.map((p) {
+      final tags = <String>[];
+      if (p.isHost) tags.add('Host');
+      if (selfPlayerId != null && p.id == selfPlayerId) tags.add('Jij');
+      return tags.isEmpty ? p.name : '${p.name} (${tags.join(', ')})';
+    }).toList();
   }
 }
 
@@ -360,7 +381,7 @@ Future<GameSessionSnapshot> fetchGameSession({required String joinCode}) async {
   return _gameSessionSnapshotFromJson(decoded, fallbackJoinCode: code);
 }
 
-Future<GameSessionSnapshot> joinGameSession({
+Future<GameSessionJoinResult> joinGameSession({
   required String joinCode,
   required String playerName,
 }) async {
@@ -372,17 +393,14 @@ Future<GameSessionSnapshot> joinGameSession({
   if (name.isEmpty) {
     throw Exception('Vul je naam in');
   }
-  final uri = gameSessionsJoinUri();
+  final uri = gameSessionsJoinUri(joinCode: code);
   final response = await http.post(
     uri,
     headers: const {
       'Accept': '*/*',
       'Content-Type': 'application/json',
     },
-    body: jsonEncode(<String, dynamic>{
-      'joinCode': code,
-      'playerName': name,
-    }),
+    body: jsonEncode(<String, dynamic>{'name': name}),
   );
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw Exception('Meedoen mislukt (${response.statusCode})');
@@ -391,7 +409,16 @@ Future<GameSessionSnapshot> joinGameSession({
   if (decoded is! Map<String, dynamic>) {
     throw Exception('Ongeldig antwoord van de server');
   }
-  return _gameSessionSnapshotFromJson(decoded, fallbackJoinCode: code);
+  final sessionJson = decoded['session'];
+  final sessionMap = sessionJson is Map<String, dynamic>
+      ? sessionJson
+      : (sessionJson is Map ? Map<String, dynamic>.from(sessionJson) : decoded);
+  final snapshot = _gameSessionSnapshotFromJson(sessionMap, fallbackJoinCode: code);
+  final playerJson = decoded['player'];
+  final selfId = playerJson is Map
+      ? _intFromJson(Map<String, dynamic>.from(playerJson)['id'])
+      : null;
+  return GameSessionJoinResult(snapshot: snapshot, selfPlayerId: selfId);
 }
 
 Future<GameSessionCreateResult> createGameSession({
@@ -423,6 +450,27 @@ Future<GameSessionCreateResult> createGameSession({
   if (code == null || code.isEmpty) {
     throw Exception('Geen spelcode ontvangen');
   }
-  final labels = _participantLabelsFromJson(decoded, hostName);
-  return GameSessionCreateResult(joinCode: code, participantLabels: labels);
+  final players = _gameSessionPlayersFromJson(decoded);
+  final hostPlayer = players.where((p) => p.isHost).cast<GameSessionPlayer?>().firstWhere(
+        (_) => true,
+        orElse: () => null,
+      );
+  List<String> labels;
+  if (players.isNotEmpty) {
+    final snapshot = GameSessionSnapshot(
+      id: _intFromJson(decoded['id']),
+      joinCode: code,
+      status: 'LOBBY',
+      players: players,
+      allVotesIn: false,
+    );
+    labels = snapshot.participantLabels(selfPlayerId: hostPlayer?.id);
+  } else {
+    labels = _participantLabelsFromJson(decoded, hostName);
+  }
+  return GameSessionCreateResult(
+    joinCode: code,
+    participantLabels: labels,
+    hostPlayerId: hostPlayer?.id,
+  );
 }

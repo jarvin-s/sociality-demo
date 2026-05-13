@@ -19,8 +19,10 @@ module.exports = async (req, res) => {
       chunks.push(chunk);
     }
     const body = Buffer.concat(chunks).toString('utf8');
+    const qs = (req.url || '').split('?')[1] || '';
+    const targetUrl = qs ? `${UPSTREAM}?${qs}` : UPSTREAM;
     try {
-      const upstream = await fetch(UPSTREAM, {
+      const upstream = await fetch(targetUrl, {
         method: 'POST',
         headers: {
           accept: '*/*',
