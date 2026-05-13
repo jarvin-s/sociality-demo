@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:sociality/api/game_session_api.dart';
 
 const Color _kStoryNavy = Color(0xFF29367C);
 const Color _kStoryPink = Color(0xFFE4318C);
@@ -16,7 +17,10 @@ class _PersonProfile {
 enum _GamePhase { choosing, results, debateVote, debateVoteResult, debateIntro, debate, revote, finalResult }
 
 class StoryPlayScreen extends StatefulWidget {
-  const StoryPlayScreen({super.key});
+  const StoryPlayScreen({super.key, this.session});
+
+  /// Live session after host starts the game; drives titles when present.
+  final GameSessionStarted? session;
 
   @override
   State<StoryPlayScreen> createState() => _StoryPlayScreenState();
@@ -43,6 +47,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   late final AnimationController _introController;
   late final Animation<Offset> _introSlide;
 
+  static const String _kDefaultTitle = 'HET SKATEPARK: DE START';
   static const List<_PersonProfile> _profiles = [
     _PersonProfile(
       name: 'Jayden Smits',
@@ -126,8 +131,57 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     setState(() => _phase = _GamePhase.revote);
   }
 
+  String get _sceneTitle {
+    final name = widget.session?.currentStory.name.trim();
+    if (name != null && name.isNotEmpty) {
+      return 'HET ${name.toUpperCase()}: DE START';
+    }
+    return _kDefaultTitle;
+  }
+
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: _kStoryNavy,
+        body: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+                      decoration: BoxDecoration(
+                        color: _kStoryCardBeige,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _sceneTitle,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: _kStoryPink,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            _body,
+                            style: TextStyle(
+                              fontSize: 15,
+                              height: 1.45,
+                              color: Colors.black.withValues(alpha: 0.98),
+                            ),
     return Scaffold(
       backgroundColor: _kStoryNavy,
       body: Stack(
@@ -198,16 +252,15 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                             height: 1.45,
                             color: Colors.black.withValues(alpha: 0.98),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const Expanded(child: SizedBox.shrink()),
-                _buildBottomPanel(context),
-              ],
+                  const Expanded(child: SizedBox.shrink()),
+                  _buildBottomPanel(context),
+                ],
+              ),
             ),
-          ),
 
           // Debate intro image overlay
           if (_phase == _GamePhase.debateIntro)
@@ -225,6 +278,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
             ),
         ],
       ),
+    ),
     );
   }
 

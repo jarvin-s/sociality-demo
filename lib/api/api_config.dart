@@ -14,6 +14,14 @@ Uri storiesApiBaseUri() {
     );
   }
   if (kIsWeb) {
+    final host = Uri.base.host;
+    if (host.contains('vercel.app')) {
+      return Uri(
+        scheme: Uri.base.scheme,
+        host: Uri.base.host,
+        port: Uri.base.hasPort ? Uri.base.port : null,
+      );
+    }
     return Uri.parse(_kProductionApiBase);
   }
   return Uri.parse(_kProductionApiBase);
