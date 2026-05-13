@@ -7,7 +7,14 @@ const Color _kStoryPink = Color(0xFFE4318C);
 const Color _kStoryCardBeige = Color(0xFFF5E9DF);
 const Color _kStorySelectedBorder = Color(0xFF2ECC71);
 
-enum _GamePhase { choosing, results, debateIntro, debate, revote, finalResult }
+class _PersonProfile {
+  const _PersonProfile({required this.name, required this.age, required this.bio});
+  final String name;
+  final int age;
+  final String bio;
+}
+
+enum _GamePhase { choosing, results, debateVote, debateVoteResult, debateIntro, debate, revote, finalResult }
 
 class StoryPlayScreen extends StatefulWidget {
   const StoryPlayScreen({super.key, this.session});
@@ -28,6 +35,10 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   final int _votesA = 2;
   final int _votesB = 3;
 
+  bool? _debateVoteChoice; // true = yes, false = no
+  final int _debateVotesYes = 3;
+  final int _debateVotesNo = 2;
+
   static const int _debateDuration = 90;
   int _timerSeconds = _debateDuration;
   Timer? _debateTimer;
@@ -37,6 +48,20 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   late final Animation<Offset> _introSlide;
 
   static const String _kDefaultTitle = 'HET SKATEPARK: DE START';
+  static const List<_PersonProfile> _profiles = [
+    _PersonProfile(
+      name: 'Jayden Smits',
+      age: 16,
+      bio: 'Jayden komt elke dag na school naar het skatepark. Hij wil de baan uitbreiden met een overkapping zodat hij ook bij regen kan skaten. Hij snapt niet waarom de buurt zo moeilijk doet — voor hem is het gewoon een plek om vrienden te ontmoeten en zijn tricks te oefenen.',
+    ),
+    _PersonProfile(
+      name: 'Greet van Dijk',
+      age: 58,
+      bio: 'Greet woont al jaren vlak naast het skatepark en heeft regelmatig last van harde muziek en rondhangend volk. Ze is niet tegen de jongeren, maar vindt dat er duidelijkere afspraken moeten komen over tijden en gedrag in de buurt.',
+    ),
+  ];
+
+  static const String _title = 'HET SKATEPARK: DE START';
   static const String _body =
       'Jongeren in een middelgroot drop willen hun skatebaan uitbreiden met een overkapping en bankjes. De baan aan velden. Het is een populaire hangplek. Dat zorgt soms voor overlast door brommers, harde muziek en af en toe signalen van drugsgebruik of -dealen';
 
@@ -87,6 +112,18 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         });
       });
     });
+  }
+
+  void _showProfileSheet(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+        child: _ProfileCard(profiles: _profiles),
+      ),
+    );
   }
 
   void _skipDebate() {
@@ -145,6 +182,75 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                               height: 1.45,
                               color: Colors.black.withValues(alpha: 0.98),
                             ),
+    return Scaffold(
+      backgroundColor: _kStoryNavy,
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    color: Colors.white,
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+                    decoration: BoxDecoration(
+                      color: _kStoryCardBeige,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                _title,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kStoryPink,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => _showProfileSheet(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: _kStoryPink.withValues(alpha: 0.18),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.people_alt_rounded,
+                                  color: _kStoryPink,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _body,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.45,
+                            color: Colors.black.withValues(alpha: 0.98),
                           ),
                         ],
                       ),
@@ -192,6 +298,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       child: switch (_phase) {
         _GamePhase.choosing || _GamePhase.debateIntro => _buildChoosingPanel(),
         _GamePhase.results => _buildResultsPanel(),
+        _GamePhase.debateVote => _buildDebateVotePanel(),
+        _GamePhase.debateVoteResult => _buildDebateVoteResultPanel(),
         _GamePhase.debate => _buildDebatePanel(),
         _GamePhase.revote => _buildRevotePanel(),
         _GamePhase.finalResult => _buildFinalResultPanel(),
@@ -273,15 +381,126 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: _startDebate,
+          onPressed: () => setState(() => _phase = _GamePhase.debateVote),
           style: ElevatedButton.styleFrom(
             backgroundColor: _kStoryPink,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: const Text(
-            'Start debatronde',
+            'Laat de groep stemmen',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDebateVotePanel() {
+    final voted = _debateVoteChoice != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          voted ? 'Wachten op andere spelers...' : 'Wil jij debatteren?',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: voted ? Colors.black54 : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (!voted)
+          const Text(
+            'De stemmen liggen dicht bij elkaar. Wil de groep een debat voeren?',
+            style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+          ),
+        const SizedBox(height: 20),
+        _DebateVoteButton(
+          label: 'Ja, debatteren!',
+          icon: Icons.thumb_up_rounded,
+          isSelected: _debateVoteChoice == true,
+          isDisabled: voted && _debateVoteChoice != true,
+          color: _kStoryNavy,
+          onPressed: voted ? null : () => setState(() => _debateVoteChoice = true),
+        ),
+        const SizedBox(height: 12),
+        _DebateVoteButton(
+          label: 'Nee, overslaan',
+          icon: Icons.thumb_down_rounded,
+          isSelected: _debateVoteChoice == false,
+          isDisabled: voted && _debateVoteChoice != false,
+          color: Colors.black54,
+          onPressed: voted ? null : () => setState(() => _debateVoteChoice = false),
+        ),
+        if (voted) ...[
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => setState(() => _phase = _GamePhase.debateVoteResult),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black54,
+              side: const BorderSide(color: Colors.black26),
+            ),
+            child: const Text('🧪 Simuleer debatstemming'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDebateVoteResultPanel() {
+    final total = _debateVotesYes + _debateVotesNo;
+    final yesWins = _debateVotesYes >= _debateVotesNo;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Wil de groep debatteren?',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: 16),
+        _VoteBar(label: 'Ja', votes: _debateVotesYes, total: total, color: _kStoryNavy),
+        const SizedBox(height: 10),
+        _VoteBar(label: 'Nee', votes: _debateVotesNo, total: total, color: Colors.black38),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: yesWins ? Colors.green.shade100 : Colors.red.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: yesWins ? Colors.green.shade300 : Colors.red.shade200,
+            ),
+          ),
+          child: Text(
+            yesWins
+                ? 'De groep wil debatteren! Start de debatronde.'
+                : 'De groep wil geen debat. Stem direct opnieuw.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: yesWins
+              ? _startDebate
+              : () => setState(() => _phase = _GamePhase.revote),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kStoryPink,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text(
+            yesWins ? 'Start debatronde' : 'Sla debat over',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -443,6 +662,260 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DebateVoteButton extends StatelessWidget {
+  const _DebateVoteButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.isDisabled,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final bool isDisabled;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isDisabled ? 0.35 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: isSelected ? color : color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? _kStorySelectedBorder : color.withValues(alpha: 0.4),
+                width: isSelected ? 3 : 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: isSelected ? Colors.white : color, size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : color,
+                  ),
+                ),
+                if (isSelected) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 20),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileCard extends StatefulWidget {
+  const _ProfileCard({required this.profiles});
+  final List<_PersonProfile> profiles;
+
+  @override
+  State<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<_ProfileCard> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profiles[_index];
+    const double avatarRadius = 58.0;
+    const double navyHeight = 96.0;
+
+    return Container(
+      height: 460,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            children: [
+              Container(height: navyHeight, color: _kStoryNavy),
+              Expanded(
+                child: Container(
+                  color: _kStoryCardBeige,
+                  padding: const EdgeInsets.fromLTRB(24, avatarRadius + 16, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        profile.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: _kStoryPink,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Leeftijd: ${profile.age}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'OVER ${profile.name.split(' ').first.toUpperCase()}:',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: _kStoryPink,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          profile.bio,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.55,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.fade,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 38,
+                          child: _index > 0
+                              ? GestureDetector(
+                                  onTap: () => setState(() => _index--),
+                                  child: const Icon(
+                                    Icons.chevron_left_rounded,
+                                    size: 30,
+                                    color: _kStoryPink,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(widget.profiles.length, (i) {
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: i == _index ? 20 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: i == _index
+                                      ? Colors.black87
+                                      : Colors.black38,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 38,
+                          child: _index < widget.profiles.length - 1
+                              ? GestureDetector(
+                                  onTap: () => setState(() => _index++),
+                                  child: const Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 30,
+                                    color: _kStoryPink,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ],
+          ),
+          // Close button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+          Positioned(
+            top: navyHeight - avatarRadius,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: avatarRadius * 2,
+                height: avatarRadius * 2,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _kStoryPink, width: 4),
+                  color: _kStoryNavy,
+                ),
+                child: const ClipOval(
+                  child: Icon(Icons.person, size: 64, color: Colors.white70),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

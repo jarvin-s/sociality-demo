@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   mobile_scanner: ^7.2.0
+  audioplayers: ^6.0.0
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -70,6 +72,7 @@ flutter:
   assets:
   - assets/images/
   - assets/crown.svg
+  - assets/sounds/click.wav
   
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
