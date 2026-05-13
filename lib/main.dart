@@ -11,10 +11,8 @@ import 'screens/overview_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const SocialityApp());
 }
 
@@ -26,55 +24,57 @@ class SocialityApp extends StatelessWidget {
     return MaterialApp(
       title: 'Sociality',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.pink,
-        fontFamily: 'SF Pro Text',
-      ),
+      theme: ThemeData(primarySwatch: Colors.pink, fontFamily: 'SF Pro Text'),
       initialRoute: '/',
 
       // Navigation
       onGenerateRoute: (settings) {
+        Widget page;
         switch (settings.name) {
-
           // Home screen
           case '/':
-            return MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            );
+            page = const HomeScreen();
 
           // Welcome screen
           case '/welcome':
-            return MaterialPageRoute(
-              builder: (context) => const WelcomeScreen(),
-            );
+            page = const WelcomeScreen();
 
           // Config screen
           case '/config':
-            return MaterialPageRoute(
-              builder: (context) => const ConfigScreen(),
-            );
+            page = const ConfigScreen();
 
           // Join screen
           case '/join':
-            return MaterialPageRoute(
-              builder: (context) => const JoinScreen(),
-            );
+            page = const JoinScreen();
 
           // Overview screen
           case '/overview':
-            return MaterialPageRoute(
-              builder: (context) => const OverviewScreen(),
-            );
+            page = const OverviewScreen();
 
           default:
-            return MaterialPageRoute(
-              builder: (context) => const Scaffold(
-                body: Center(
-                  child: Text('Route not found'),
-                ),
-              ),
-            );
+            page = const Scaffold(body: Center(child: Text('Route not found')));
         }
+
+        // Slide animation for all transitions
+        return PageRouteBuilder(
+          settings: settings,
+          transitionDuration: const Duration(milliseconds: 250),
+          pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slide =
+                Tween<Offset>(
+                  begin: const Offset(1.0, 0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                );
+
+            return SlideTransition(position: slide, child: child);
+          },
+        );
       },
     );
   }
