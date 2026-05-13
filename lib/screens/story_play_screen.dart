@@ -61,7 +61,6 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     ),
   ];
 
-  static const String _title = 'HET SKATEPARK: DE START';
   static const String _body =
       'Jongeren in een middelgroot drop willen hun skatebaan uitbreiden met een overkapping en bankjes. De baan aan velden. Het is een populaire hangplek. Dat zorgt soms voor overlast door brommers, harde muziek en af en toe signalen van drugsgebruik of -dealen';
 
@@ -152,7 +151,16 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      color: Colors.white,
+                      tooltip:
+                          MaterialLocalizations.of(context).backButtonTooltip,
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
                     child: Container(
@@ -165,14 +173,37 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _sceneTitle,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: _kStoryPink,
-                              height: 1.25,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _sceneTitle,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: _kStoryPink,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _showProfileSheet(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: _kStoryPink.withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.people_alt_rounded,
+                                    color: _kStoryPink,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 14),
                           Text(
@@ -182,75 +213,6 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                               height: 1.45,
                               color: Colors.black.withValues(alpha: 0.98),
                             ),
-    return Scaffold(
-      backgroundColor: _kStoryNavy,
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    color: Colors.white,
-                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-                    decoration: BoxDecoration(
-                      color: _kStoryCardBeige,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                _title,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: _kStoryPink,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => _showProfileSheet(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: _kStoryPink.withValues(alpha: 0.18),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.people_alt_rounded,
-                                  color: _kStoryPink,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          _body,
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.45,
-                            color: Colors.black.withValues(alpha: 0.98),
                           ),
                         ],
                       ),
@@ -262,23 +224,23 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               ),
             ),
 
-          // Debate intro image overlay
-          if (_phase == _GamePhase.debateIntro)
-            SlideTransition(
-              position: _introSlide,
-              child: Container(
-                color: _kStoryNavy,
-                child: Image.asset(
-                  'assets/images/debat.png',
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
+            // Debate intro image overlay
+            if (_phase == _GamePhase.debateIntro)
+              SlideTransition(
+                position: _introSlide,
+                child: Container(
+                  color: _kStoryNavy,
+                  child: Image.asset(
+                    'assets/images/debat.png',
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
