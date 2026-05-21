@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sociality/api/game_session_api.dart';
+import 'package:sociality/services/player_identity.dart';
 
 const Color _kStoryNavy = Color(0xFF29367C);
 const Color _kStoryPink = Color(0xFFE4318C);
@@ -86,6 +87,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   void dispose() {
     _debateTimer?.cancel();
     _introController.dispose();
+    clearPlayerIdentity();
     super.dispose();
   }
 

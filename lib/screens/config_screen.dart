@@ -27,14 +27,31 @@ class _ConfigScreenState extends State<ConfigScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF273583),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  color: Colors.white,
+                  tooltip:
+                      MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+              ),
 
               // Image
-              Image.asset('assets/images/logo.png', width: 250, height: 230),
+              Center(
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 250,
+                  height: 230,
+                  fit: BoxFit.contain,
+                ),
+              ),
 
               // Title
               AnimatedOpacity(

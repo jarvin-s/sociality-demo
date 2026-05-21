@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/guest_lobby_screen.dart';
+import 'package:sociality/services/player_identity.dart';
 
 class JoinCodeFormatter extends TextInputFormatter {
   @override
@@ -36,6 +37,8 @@ class _JoinScreenState extends State<JoinScreen> {
   bool _qrScanned = false;
   bool _joinBusy = false;
   bool _isPressed = false;
+  bool _scanPressed = false;
+  bool _cancelPressed = false;
 
   // When true, everything animates into its final position
   bool _visible = false;
@@ -88,7 +91,12 @@ class _JoinScreenState extends State<JoinScreen> {
 
     setState(() => _joinBusy = true);
     try {
+      await clearPlayerIdentity();
       final result = await joinGameSession(joinCode: code, playerName: name);
+      final self = result.selfPlayer;
+      if (self != null) {
+        await savePlayerIdentity(self);
+      }
       if (!mounted) return;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
@@ -115,13 +123,29 @@ class _JoinScreenState extends State<JoinScreen> {
       backgroundColor: const Color(0xFF273583),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                Image.asset('assets/images/logo.png', width: 184, height: 184),
-                const SizedBox(height: 10),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  color: Colors.white,
+                  tooltip:
+                      MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+              ),
+              Center(
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 184,
+                  height: 184,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 10),
 
                 // Title + subtitle
                 AnimatedOpacity(
@@ -190,6 +214,10 @@ class _JoinScreenState extends State<JoinScreen> {
                                     textInputAction: TextInputAction.next,
                                     decoration: const InputDecoration(
                                       hintText: 'bijvoorbeeld: Sam',
+                                      hintStyle: TextStyle(
+                                        color: Color(0xFF9E9E9E),
+                                        fontSize: 18,
+                                      ),
                                       filled: true,
                                       fillColor: Color(0xFFE6E1E1),
                                       border: OutlineInputBorder(
@@ -200,8 +228,13 @@ class _JoinScreenState extends State<JoinScreen> {
                                       ),
                                       contentPadding: EdgeInsets.symmetric(
                                         horizontal: 12,
-                                        vertical: 10,
+                                        vertical: 12,
                                       ),
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
                                   ),
                                   const SizedBox(height: 18),
@@ -223,9 +256,9 @@ class _JoinScreenState extends State<JoinScreen> {
                                       JoinCodeFormatter(),
                                       LengthLimitingTextInputFormatter(6),
                                     ],
-                                    textAlign: TextAlign.center,
+                                    textAlign: TextAlign.left,
                                     decoration: const InputDecoration(
-                                      hintText: 'bijv. 3WJ5EP',
+                                      hintText: 'bijvoorbeeld: 3WJ5EP',
                                       hintStyle: TextStyle(
                                         color: Color(0xFF9E9E9E),
                                         fontSize: 18,
@@ -333,19 +366,88 @@ class _JoinScreenState extends State<JoinScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 12),
-                                    GestureDetector(
-                                      onTap: () => setState(() {
-                                        isScanning = false;
-                                        _hasScanned = false;
-                                      }),
-                                      child: const Padding(
-                                        padding:
-                                            EdgeInsets.only(bottom: 20),
-                                        child: Text(
-                                          'Annuleren',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey,
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 20),
+                                      child: GestureDetector(
+                                        onTap: () => setState(() {
+                                          isScanning = false;
+                                          _hasScanned = false;
+                                        }),
+                                        onTapDown: (_) => setState(
+                                          () => _cancelPressed = true,
+                                        ),
+                                        onTapUp: (_) => setState(
+                                          () => _cancelPressed = false,
+                                        ),
+                                        onTapCancel: () => setState(
+                                          () => _cancelPressed = false,
+                                        ),
+                                        child: AnimatedScale(
+                                          scale: _cancelPressed ? 0.98 : 1.0,
+                                          duration: const Duration(
+                                            milliseconds: 100,
+                                          ),
+                                          child: SizedBox(
+                                            width: 189,
+                                            height: 42,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Positioned(
+                                                  bottom: 0,
+                                                  left: 3,
+                                                  right: 0,
+                                                  child: Container(
+                                                    height: 38,
+                                                    decoration:
+                                                        BoxDecoration(
+                                                      color: const Color
+                                                          .fromARGB(
+                                                        255,
+                                                        182,
+                                                        6,
+                                                        100,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius
+                                                              .circular(50),
+                                                    ),
+                                                  ),
+                                                ),
+                                                AnimatedPositioned(
+                                                  duration: const Duration(
+                                                    milliseconds: 100,
+                                                  ),
+                                                  top: _cancelPressed ? 4 : 0,
+                                                  left: 0,
+                                                  right:
+                                                      _cancelPressed ? 0 : 3,
+                                                  child: Container(
+                                                    height: 38,
+                                                    decoration:
+                                                        BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFE82A91,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius
+                                                              .circular(50),
+                                                    ),
+                                                    alignment: Alignment.center,
+                                                    child: const Text(
+                                                      'Annuleren',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -353,29 +455,92 @@ class _JoinScreenState extends State<JoinScreen> {
                                   ],
                                 )
                               else
-                                GestureDetector(
-                                  onTap: () =>
-                                      setState(() => isScanning = true),
-                                  child: Container(
-                                    width: 180,
-                                    height: 54,
-                                    margin:
-                                        const EdgeInsets.only(bottom: 20),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD9D9D9),
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Text(
-                                      'Tik om te scannen',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(bottom: 20),
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => isScanning = true),
+                                    onTapDown: (_) =>
+                                        setState(() => _scanPressed = true),
+                                    onTapUp: (_) =>
+                                        setState(() => _scanPressed = false),
+                                    onTapCancel: () =>
+                                        setState(() => _scanPressed = false),
+                                    child: AnimatedScale(
+                                      scale: _scanPressed ? 0.98 : 1.0,
+                                      duration:
+                                          const Duration(milliseconds: 100),
+                                      child: SizedBox(
+                                        width: 189,
+                                        height: 42,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Positioned(
+                                              bottom: 0,
+                                              left: 3,
+                                              right: 0,
+                                              child: Container(
+                                                height: 38,
+                                                decoration: BoxDecoration(
+                                                  color: const Color.fromARGB(
+                                                    255,
+                                                    182,
+                                                    6,
+                                                    100,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    50,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            AnimatedPositioned(
+                                              duration: const Duration(
+                                                milliseconds: 100,
+                                              ),
+                                              top: _scanPressed ? 4 : 0,
+                                              left: 0,
+                                              right: _scanPressed ? 0 : 3,
+                                              child: Container(
+                                                height: 38,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFFE82A91),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    50,
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .qr_code_scanner_rounded,
+                                                      color: Colors.white,
+                                                      size: 20,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text(
+                                                      'Tik om te scannen',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -474,7 +639,6 @@ class _JoinScreenState extends State<JoinScreen> {
                 const SizedBox(height: 40),
               ],
             ),
-          ),
         ),
       ),
     );

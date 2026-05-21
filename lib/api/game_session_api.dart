@@ -67,13 +67,14 @@ Uri _gamesessionsBaseUri() {
   );
 }
 
-Uri gameSessionsJoinUri({String? joinCode}) {
+Uri gameSessionsJoinUri(String joinCode) {
   final root = _gamesessionsBaseUri();
   return root.replace(
-    pathSegments: <String>[...root.pathSegments, 'join'],
-    queryParameters: joinCode == null || joinCode.isEmpty
-        ? null
-        : <String, String>{'joinCode': joinCode},
+    pathSegments: <String>[
+      ...root.pathSegments,
+      joinCode.trim(),
+      'join',
+    ],
   );
 }
 
@@ -149,22 +150,26 @@ class GameSessionCreateResult {
   const GameSessionCreateResult({
     required this.joinCode,
     required this.participantLabels,
-    this.hostPlayerId,
+    this.hostPlayer,
   });
 
   final String joinCode;
   final List<String> participantLabels;
-  final int? hostPlayerId;
+  final GameSessionPlayer? hostPlayer;
+
+  int? get hostPlayerId => hostPlayer?.id;
 }
 
 class GameSessionJoinResult {
   const GameSessionJoinResult({
     required this.snapshot,
-    this.selfPlayerId,
+    this.selfPlayer,
   });
 
   final GameSessionSnapshot snapshot;
-  final int? selfPlayerId;
+  final GameSessionPlayer? selfPlayer;
+
+  int? get selfPlayerId => selfPlayer?.id;
 }
 
 class GameSessionPlayer {
@@ -308,21 +313,26 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
   );
 }
 
+GameSessionPlayer? _gameSessionPlayerFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final m = Map<String, dynamic>.from(json);
+  final id = _intFromJson(m['id']);
+  final name = m['name'];
+  if (id == null || name is! String || name.trim().isEmpty) return null;
+  return GameSessionPlayer(
+    id: id,
+    name: name.trim(),
+    isHost: m['isHost'] == true,
+  );
+}
+
 List<GameSessionPlayer> _gameSessionPlayersFromJson(Map<String, dynamic> json) {
   final list = json['players'];
   if (list is! List<dynamic>) return const <GameSessionPlayer>[];
   final out = <GameSessionPlayer>[];
   for (final item in list) {
-    if (item is! Map) continue;
-    final m = Map<String, dynamic>.from(item);
-    final id = _intFromJson(m['id']);
-    final name = m['name'];
-    if (id == null || name is! String || name.trim().isEmpty) continue;
-    out.add(GameSessionPlayer(
-      id: id,
-      name: name.trim(),
-      isHost: m['isHost'] == true,
-    ));
+    final player = _gameSessionPlayerFromJson(item);
+    if (player != null) out.add(player);
   }
   return out;
 }
@@ -393,7 +403,7 @@ Future<GameSessionJoinResult> joinGameSession({
   if (name.isEmpty) {
     throw Exception('Vul je naam in');
   }
-  final uri = gameSessionsJoinUri(joinCode: code);
+  final uri = gameSessionsJoinUri(code);
   final response = await http.post(
     uri,
     headers: const {
@@ -414,11 +424,8 @@ Future<GameSessionJoinResult> joinGameSession({
       ? sessionJson
       : (sessionJson is Map ? Map<String, dynamic>.from(sessionJson) : decoded);
   final snapshot = _gameSessionSnapshotFromJson(sessionMap, fallbackJoinCode: code);
-  final playerJson = decoded['player'];
-  final selfId = playerJson is Map
-      ? _intFromJson(Map<String, dynamic>.from(playerJson)['id'])
-      : null;
-  return GameSessionJoinResult(snapshot: snapshot, selfPlayerId: selfId);
+  final selfPlayer = _gameSessionPlayerFromJson(decoded['player']);
+  return GameSessionJoinResult(snapshot: snapshot, selfPlayer: selfPlayer);
 }
 
 Future<GameSessionCreateResult> createGameSession({
@@ -451,10 +458,13 @@ Future<GameSessionCreateResult> createGameSession({
     throw Exception('Geen spelcode ontvangen');
   }
   final players = _gameSessionPlayersFromJson(decoded);
-  final hostPlayer = players.where((p) => p.isHost).cast<GameSessionPlayer?>().firstWhere(
-        (_) => true,
-        orElse: () => null,
-      );
+  GameSessionPlayer? hostPlayer;
+  for (final p in players) {
+    if (p.isHost) {
+      hostPlayer = p;
+      break;
+    }
+  }
   List<String> labels;
   if (players.isNotEmpty) {
     final snapshot = GameSessionSnapshot(
@@ -471,6 +481,6 @@ Future<GameSessionCreateResult> createGameSession({
   return GameSessionCreateResult(
     joinCode: code,
     participantLabels: labels,
-    hostPlayerId: hostPlayer?.id,
+    hostPlayer: hostPlayer,
   );
 }

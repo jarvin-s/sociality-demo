@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/story_play_screen.dart';
+import 'package:sociality/services/player_identity.dart';
 
 const Color _kGuestLobbyNavy = Color(0xFF2A337E);
 const Color _kGuestLobbyPink = Color(0xFFE9338F);
@@ -42,6 +43,9 @@ class _GuestLobbyScreenState extends State<GuestLobbyScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    if (!_navigatedToPlay) {
+      clearPlayerIdentity();
+    }
     super.dispose();
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/story_play_screen.dart';
+import 'package:sociality/services/player_identity.dart';
 
 const Color _kParticipantNavy = Color(0xFF2A337E);
 const Color _kParticipantPink = Color(0xFFE9338F);
@@ -92,10 +93,15 @@ class _ParticipantScreenState extends State<ParticipantScreen> {
       _error = null;
     });
     try {
+      await clearPlayerIdentity();
       final result = await createGameSession(
         currentStory: widget.currentStory,
         hostName: widget.hostName,
       );
+      final host = result.hostPlayer;
+      if (host != null) {
+        await savePlayerIdentity(host);
+      }
       if (!mounted) return;
       setState(() {
         _loading = false;
