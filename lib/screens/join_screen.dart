@@ -280,7 +280,6 @@ class _JoinScreenState extends State<JoinScreen> {
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black,
-                                      letterSpacing: 2,
                                     ),
                                   ),
                                 ],
