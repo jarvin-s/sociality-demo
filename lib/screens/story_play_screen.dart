@@ -153,16 +153,17 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: Colors.white,
-                      tooltip:
-                          MaterialLocalizations.of(context).backButtonTooltip,
+                  if (widget.session == null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        color: Colors.white,
+                        tooltip: MaterialLocalizations.of(context)
+                            .backButtonTooltip,
+                      ),
                     ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
                     child: Container(
