@@ -46,14 +46,11 @@ class SocialityApp extends StatelessWidget {
 
           // Join screen
           case '/join':
-            return MaterialPageRoute(
-              builder: (context) => JoinScreen(
-                initialJoinCode: kIsWeb
-                    ? Uri.base.queryParameters['code']
-                    : null,
-              ),
+            page = JoinScreen(
+              initialJoinCode: kIsWeb
+                  ? Uri.base.queryParameters['code']
+                  : null,
             );
-            page = const JoinScreen();
 
           // Overview screen
           case '/overview':
