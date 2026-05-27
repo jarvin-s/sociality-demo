@@ -99,6 +99,28 @@ Uri gameSessionStartUri(String joinCode) {
   );
 }
 
+Uri gameSessionVoteUri(String joinCode) {
+  final root = _gamesessionsBaseUri();
+  return root.replace(
+    pathSegments: <String>[
+      ...root.pathSegments,
+      joinCode.trim(),
+      'vote',
+    ],
+  );
+}
+
+Uri gameSessionChooseUri(String joinCode) {
+  final root = _gamesessionsBaseUri();
+  return root.replace(
+    pathSegments: <String>[
+      ...root.pathSegments,
+      joinCode.trim(),
+      'choose',
+    ],
+  );
+}
+
 int? _intFromJson(dynamic v) {
   if (v is int) return v;
   if (v is num) return v.toInt();
@@ -184,6 +206,34 @@ class GameSessionPlayer {
   final bool isHost;
 }
 
+class CardOptionSnapshot {
+  const CardOptionSnapshot({
+    required this.id,
+    required this.optionText,
+    this.destinationCard,
+  });
+
+  final int id;
+  final String optionText;
+  final CardSnapshot? destinationCard;
+}
+
+class CardSnapshot {
+  const CardSnapshot({
+    required this.id,
+    required this.title,
+    required this.situation,
+    this.intervention,
+    this.options = const <CardOptionSnapshot>[],
+  });
+
+  final int id;
+  final String title;
+  final String situation;
+  final String? intervention;
+  final List<CardOptionSnapshot> options;
+}
+
 class GameSessionStorySnapshot {
   const GameSessionStorySnapshot({
     required this.id,
@@ -214,7 +264,7 @@ class GameSessionStarted {
   final String status;
   final GameSessionStorySnapshot currentStory;
   final List<GameSessionPlayer> players;
-  final Object? currentCard;
+  final CardSnapshot? currentCard;
   final bool allVotesIn;
 }
 
@@ -235,7 +285,7 @@ class GameSessionSnapshot {
   final String status;
   final List<GameSessionPlayer> players;
   final GameSessionStorySnapshot? currentStory;
-  final Object? currentCard;
+  final CardSnapshot? currentCard;
   final bool allVotesIn;
 
   GameSessionStarted? get asStartedSessionOrNull {
@@ -286,6 +336,45 @@ GameSessionStorySnapshot? _currentStorySnapshotFromJsonNullable(Map<String, dyna
   );
 }
 
+CardSnapshot? _cardSnapshotFromJsonNullable(dynamic raw) {
+  if (raw == null || raw is! Map) return null;
+  final m = Map<String, dynamic>.from(raw);
+  final id = _intFromJson(m['id']);
+  final title = m['title'];
+  final situation = m['situation'];
+  if (id == null || title is! String || situation is! String) return null;
+  final optionsRaw = m['options'];
+  final options = <CardOptionSnapshot>[];
+  if (optionsRaw is List<dynamic>) {
+    for (final opt in optionsRaw) {
+      final parsed = _cardOptionSnapshotFromJsonNullable(opt);
+      if (parsed != null) options.add(parsed);
+    }
+  }
+  final intervention = m['intervention'];
+  return CardSnapshot(
+    id: id,
+    title: title.trim(),
+    situation: situation.trim(),
+    intervention: intervention is String ? intervention.trim() : null,
+    options: options,
+  );
+}
+
+CardOptionSnapshot? _cardOptionSnapshotFromJsonNullable(dynamic raw) {
+  if (raw == null || raw is! Map) return null;
+  final m = Map<String, dynamic>.from(raw);
+  final id = _intFromJson(m['id']);
+  final optionText = m['optionText'];
+  if (id == null || optionText is! String) return null;
+  final destCard = _cardSnapshotFromJsonNullable(m['destinationCard']);
+  return CardOptionSnapshot(
+    id: id,
+    optionText: optionText.trim(),
+    destinationCard: destCard,
+  );
+}
+
 GameSessionSnapshot _gameSessionSnapshotFromJson(
   Map<String, dynamic> decoded, {
   required String fallbackJoinCode,
@@ -302,13 +391,14 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
   final players = _gameSessionPlayersFromJson(decoded);
   final story = _currentStorySnapshotFromJsonNullable(decoded);
   final allVotesIn = decoded['allVotesIn'] == true;
+  final card = _cardSnapshotFromJsonNullable(decoded['currentCard']);
   return GameSessionSnapshot(
     id: id,
     joinCode: join,
     status: status.trim(),
     players: players,
     currentStory: story,
-    currentCard: decoded['currentCard'],
+    currentCard: card,
     allVotesIn: allVotesIn,
   );
 }
@@ -483,4 +573,66 @@ Future<GameSessionCreateResult> createGameSession({
     participantLabels: labels,
     hostPlayer: hostPlayer,
   );
+}
+
+Future<GameSessionSnapshot> voteForCardOption({
+  required String joinCode,
+  required int playerId,
+  required int cardOptionId,
+}) async {
+  final code = joinCode.trim().toUpperCase();
+  if (code.isEmpty) {
+    throw Exception('Geen spelcode');
+  }
+  final uri = gameSessionVoteUri(code);
+  final response = await http.post(
+    uri,
+    headers: const {
+      'Accept': '*/*',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'playerId': playerId,
+      'cardOptionId': cardOptionId,
+    }),
+  );
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('Stem uitbrengen mislukt (${response.statusCode})');
+  }
+  final decoded = jsonDecode(response.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw Exception('Ongeldig antwoord van de server');
+  }
+  return _gameSessionSnapshotFromJson(decoded, fallbackJoinCode: code);
+}
+
+Future<GameSessionSnapshot> chooseCardOption({
+  required String joinCode,
+  required int playerId,
+  required int cardOptionId,
+}) async {
+  final code = joinCode.trim().toUpperCase();
+  if (code.isEmpty) {
+    throw Exception('Geen spelcode');
+  }
+  final uri = gameSessionChooseUri(code);
+  final response = await http.post(
+    uri,
+    headers: const {
+      'Accept': '*/*',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'playerId': playerId,
+      'cardOptionId': cardOptionId,
+    }),
+  );
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('Keuze maken mislukt (${response.statusCode})');
+  }
+  final decoded = jsonDecode(response.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw Exception('Ongeldig antwoord van de server');
+  }
+  return _gameSessionSnapshotFromJson(decoded, fallbackJoinCode: code);
 }

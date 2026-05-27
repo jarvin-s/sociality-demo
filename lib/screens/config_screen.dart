@@ -70,7 +70,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                     ),
                     SizedBox(height: 5),
                     Text(
-                      'Host je eigen spel of meedoen met anderen!',
+                      'Host je eigen spel of doe mee met anderen!',
                       style: TextStyle(fontSize: 16, color: Colors.white),
                       textAlign: TextAlign.center,
                     ),
