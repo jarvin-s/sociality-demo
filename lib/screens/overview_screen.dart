@@ -21,12 +21,41 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
-  late final Future<List<_SituationItem>> _storiesFuture;
+  // Holds the loaded stories once the API responds
+  List<_SituationItem> _situations = [];
+  bool _loading = true;
+  String? _error;
+
+  // When true cards animate into position
+  // Changed to true AFTER stories have loaded so the animation gets played after loading in
+  bool _visible = false;
 
   @override
   void initState() {
     super.initState();
-    _storiesFuture = _fetchStoryTitles();
+    _loadStories();
+  }
+
+  Future<void> _loadStories() async {
+    try {
+      final stories = await _fetchStoryTitles();
+      if (!mounted) return;
+      setState(() {
+        _situations = stories;
+        _loading = false;
+      });
+
+      // Now that cards are in the tree, trigger the animation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _visible = true);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
   }
 
   static int? _storyIdFromJson(Map<String, dynamic> raw) {
@@ -61,7 +90,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List<dynamic>) {
-      return const [];
+    return const [];
     }
     final items = <_SituationItem>[];
     for (final raw in decoded) {
@@ -81,106 +110,124 @@ class _OverviewScreenState extends State<OverviewScreen> {
     return Scaffold(
       backgroundColor: _kOverviewNavy,
       body: SafeArea(
-        child: FutureBuilder<List<_SituationItem>>(
-          future: _storiesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
+        child: _loading
+            // Loading state
+            ? const Center(
                 child: CircularProgressIndicator(color: Colors.white),
-              );
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    snapshot.error.toString(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              );
-            }
-            final situations = snapshot.data ?? const <_SituationItem>[];
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: Colors.white,
-                      tooltip:
-                          MaterialLocalizations.of(context).backButtonTooltip,
-                    ),
-                  ),
-                  Center(
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 250,
-                      height: 200,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const _LogoFallback();
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Kies de situatie',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Kies één situatie die het beste bij jullie past',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.35,
-                      color: Colors.white.withValues(alpha: 0.95),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (situations.isEmpty)
-                    Text(
-                      'Geen situaties beschikbaar.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withValues(alpha: 0.9),
+              )
+            : _error != null
+                // Error state
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
-                    )
-                  else
-                    for (var i = 0; i < situations.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 16),
-                      _SituationCard(
-                        title: situations[i].title,
-                        placeholderIcon: situations[i].placeholderIcon,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => HostNameScreen(
-                                situationTitle: situations[i].title,
-                                currentStory: situations[i].storyId,
+                    ),
+                  )
+                // Loaded state
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            color: Colors.white,
+                            tooltip:
+                                MaterialLocalizations.of(context).backButtonTooltip,
+                          ),
+                        ),
+                        Center(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 250,
+                            height: 200,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const _LogoFallback();
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Title + subtitle fade in
+                        AnimatedOpacity(
+                          opacity: _visible ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 400),
+                          child: const Column(
+                            children: [
+                              Text(
+                                'Kies de situatie',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Kies één situatie die het beste bij jullie past',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  height: 1.35,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        if (_situations.isEmpty)
+                          Text(
+                            'Geen situaties beschikbaar.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          )
+                        else
+                          // Each card slides up and fades in with a staggered delay
+                          for (var i = 0; i < _situations.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 16),
+                            AnimatedSlide(
+                              offset: _visible ? Offset.zero : const Offset(0, 0.3),
+                              duration: Duration(milliseconds: 400 + (i * 100)),
+                              curve: Curves.easeOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: _visible ? 1.0 : 0.0,
+                                duration: Duration(milliseconds: 300 + (i * 100)),
+                                child: _SituationCard(
+                                  title: _situations[i].title,
+                                  placeholderIcon: _situations[i].placeholderIcon,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (context) => HostNameScreen(
+                                          situationTitle: _situations[i].title,
+                                          currentStory: _situations[i].storyId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ],
-                ],
-              ),
-            );
-          },
-        ),
+                          ],
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -211,11 +258,7 @@ class _LogoFallback extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.favorite,
-          size: 100,
-          color: _kSituationPink,
-        ),
+        Icon(Icons.favorite, size: 100, color: _kSituationPink),
         const SizedBox(height: 4),
         Text(
           'SOCIALITY',
@@ -225,16 +268,8 @@ class _LogoFallback extends StatelessWidget {
             color: _kSituationPink,
             letterSpacing: 0.5,
             shadows: const [
-              Shadow(
-                color: Colors.white,
-                offset: Offset(1.5, 1.5),
-                blurRadius: 0,
-              ),
-              Shadow(
-                color: Colors.white,
-                offset: Offset(-1.5, -1.5),
-                blurRadius: 0,
-              ),
+              Shadow(color: Colors.white, offset: Offset(1.5, 1.5), blurRadius: 0),
+              Shadow(color: Colors.white, offset: Offset(-1.5, -1.5), blurRadius: 0),
             ],
           ),
         ),
