@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       height: 38,
                                       decoration: BoxDecoration(
                                         color: const Color.fromARGB(255, 182, 6, 100),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(50),
                                       ),
                                     ),
                                   ),
@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       height: 38,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFE82A91),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(50),
                                       ),
                                       alignment: Alignment.center,
                                       child: const Text(
