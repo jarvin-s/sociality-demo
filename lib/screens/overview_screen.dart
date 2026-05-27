@@ -5,9 +5,23 @@ import 'package:http/http.dart' as http;
 import 'package:sociality/api/api_config.dart';
 import 'package:sociality/screens/host_name_screen.dart';
 
-const Color _kOverviewNavy = Color(0xFF233580);
+const Color _kPink = Color(0xFFEA1F86);
+const Color _kNavyDeep = Color(0xFF1F2070);
 
-const Color _kSituationPink = Color(0xFFE93D81);
+class _WedgeClipper extends CustomClipper<Path> {
+  const _WedgeClipper(this.rightCut);
+  final double rightCut;
+
+  @override
+  Path getClip(Size size) => Path()
+    ..lineTo(size.width, 0)
+    ..lineTo(size.width, size.height * rightCut)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_WedgeClipper o) => o.rightCut != rightCut;
+}
 
 Uri _storiesListUri() {
   return storiesApiBaseUri().replace(path: '/api/stories', query: null);
@@ -20,13 +34,28 @@ class OverviewScreen extends StatefulWidget {
   State<OverviewScreen> createState() => _OverviewScreenState();
 }
 
-class _OverviewScreenState extends State<OverviewScreen> {
+class _OverviewScreenState extends State<OverviewScreen>
+    with SingleTickerProviderStateMixin {
   late final Future<List<_SituationItem>> _storiesFuture;
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
     _storiesFuture = _fetchStoryTitles();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   static int? _storyIdFromJson(Map<String, dynamic> raw) {
@@ -60,9 +89,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       throw Exception('Kon verhalen niet laden (${response.statusCode})');
     }
     final decoded = jsonDecode(response.body);
-    if (decoded is! List<dynamic>) {
-      return const [];
-    }
+    if (decoded is! List<dynamic>) return const [];
     final items = <_SituationItem>[];
     for (final raw in decoded) {
       if (raw is! Map) continue;
@@ -78,109 +105,141 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      backgroundColor: _kOverviewNavy,
-      body: SafeArea(
-        child: FutureBuilder<List<_SituationItem>>(
-          future: _storiesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              );
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    snapshot.error.toString(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+      backgroundColor: _kNavyDeep,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight;
+
+          return Stack(
+            children: [
+              // Pink diagonal wedge (top 44%)
+              Positioned(
+                top: 0, left: 0, right: 0,
+                height: h * 0.44,
+                child: ClipPath(
+                  clipper: const _WedgeClipper(0.84),
+                  child: Container(color: _kPink),
                 ),
-              );
-            }
-            final situations = snapshot.data ?? const <_SituationItem>[];
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: Colors.white,
-                      tooltip:
-                          MaterialLocalizations.of(context).backButtonTooltip,
-                    ),
-                  ),
-                  Center(
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 250,
-                      height: 200,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const _LogoFallback();
+              ),
+
+              // Scrollable content
+              Positioned.fill(
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(28, topPad + 90, 28, 24 + bottomPad),
+                    child: FutureBuilder<List<_SituationItem>>(
+                      future: _storiesFuture,
+                      builder: (context, snapshot) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Headline in pink section
+                            const Text(
+                              'KIES DE SITUATIE',
+                              style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 2.5,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Kies jouw\nverhaal.',
+                              style: TextStyle(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -2,
+                                height: 0.93,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Kies één situatie die het beste bij jullie past.',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                height: 1.35,
+                              ),
+                            ),
+
+                            SizedBox(height: h * 0.18),
+
+                            // Cards in navy section
+                            if (snapshot.connectionState == ConnectionState.waiting)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.only(top: 32),
+                                  child: CircularProgressIndicator(color: Colors.white),
+                                ),
+                              )
+                            else if (snapshot.hasError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 32),
+                                child: Text(
+                                  snapshot.error.toString(),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              )
+                            else
+                              Column(
+                                children: [
+                                  for (var i = 0; i < (snapshot.data ?? []).length; i++) ...[
+                                    if (i > 0) const SizedBox(height: 12),
+                                    _SituationCard(
+                                      item: snapshot.data![i],
+                                      onTap: () => Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => HostNameScreen(
+                                            situationTitle: snapshot.data![i].title,
+                                            currentStory: snapshot.data![i].storyId,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                          ],
+                        );
                       },
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Kies de situatie',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Kies één situatie die het beste bij jullie past',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.35,
-                      color: Colors.white.withValues(alpha: 0.95),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (situations.isEmpty)
-                    Text(
-                      'Geen situaties beschikbaar.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    )
-                  else
-                    for (var i = 0; i < situations.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 16),
-                      _SituationCard(
-                        title: situations[i].title,
-                        placeholderIcon: situations[i].placeholderIcon,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => HostNameScreen(
-                                situationTitle: situations[i].title,
-                                currentStory: situations[i].storyId,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                ],
+                ),
               ),
-            );
-          },
-        ),
+
+              // Back button
+              Positioned(
+                top: topPad + 12,
+                left: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.arrow_back_rounded,
+                          color: Colors.white, size: 22),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -188,14 +247,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
 class _SituationItem {
   const _SituationItem({required this.storyId, required this.title});
-
-  /// [story_entity.id] — sent as `currentStory` when creating a game session.
   final int storyId;
   final String title;
 }
 
 extension _SituationItemIcons on _SituationItem {
-  IconData get placeholderIcon => switch (title) {
+  IconData get icon => switch (title) {
         'Speeltuin' => Icons.park_outlined,
         'Skatepark' => Icons.skateboarding,
         'Voetbalveld' => Icons.sports_soccer_outlined,
@@ -203,100 +260,66 @@ extension _SituationItemIcons on _SituationItem {
       };
 }
 
-class _LogoFallback extends StatelessWidget {
-  const _LogoFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.favorite,
-          size: 100,
-          color: _kSituationPink,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'SOCIALITY',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: _kSituationPink,
-            letterSpacing: 0.5,
-            shadows: const [
-              Shadow(
-                color: Colors.white,
-                offset: Offset(1.5, 1.5),
-                blurRadius: 0,
-              ),
-              Shadow(
-                color: Colors.white,
-                offset: Offset(-1.5, -1.5),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SituationCard extends StatelessWidget {
-  const _SituationCard({
-    required this.title,
-    required this.placeholderIcon,
-    required this.onTap,
-  });
-
-  final String title;
-  final IconData placeholderIcon;
+class _SituationCard extends StatefulWidget {
+  const _SituationCard({required this.item, required this.onTap});
+  final _SituationItem item;
   final VoidCallback onTap;
 
   @override
+  State<_SituationCard> createState() => _SituationCardState();
+}
+
+class _SituationCardState extends State<_SituationCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
           decoration: BoxDecoration(
-            color: _kSituationPink,
-            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: _kPink,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Icon(widget.item.icon,
+                        color: Colors.white, size: 24),
                   ),
                 ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 10,
-                    child: ColoredBox(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      child: Center(
-                        child: Icon(
-                          placeholderIcon,
-                          size: 64,
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    widget.item.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ),
+                Icon(Icons.chevron_right_rounded,
+                    color: Colors.white.withValues(alpha: 0.4), size: 24),
               ],
             ),
           ),
