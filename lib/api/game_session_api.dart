@@ -232,6 +232,16 @@ class CardSnapshot {
   final String situation;
   final String? intervention;
   final List<CardOptionSnapshot> options;
+
+  bool get isLastRound {
+    final upper = title.toUpperCase();
+    if (RegExp(r'KAART\s*6').hasMatch(upper)) return true;
+    if (options.isNotEmpty &&
+        options.every((o) => o.destinationCard == null)) {
+      return true;
+    }
+    return false;
+  }
 }
 
 class GameSessionStorySnapshot {
