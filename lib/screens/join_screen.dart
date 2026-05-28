@@ -5,6 +5,8 @@ import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/guest_lobby_screen.dart';
 import 'package:sociality/services/player_identity.dart';
 
+const Color _kJoinPink = Color(0xFFE93D81);
+
 class JoinCodeFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -212,29 +214,36 @@ class _JoinScreenState extends State<JoinScreen> {
                                     textCapitalization:
                                         TextCapitalization.words,
                                     textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
+                                    cursorColor: _kJoinPink,
+                                    decoration: InputDecoration(
                                       hintText: 'bijvoorbeeld: Sam',
-                                      hintStyle: TextStyle(
-                                        color: Color(0xFF9E9E9E),
-                                        fontSize: 18,
-                                      ),
                                       filled: true,
-                                      fillColor: Color(0xFFE6E1E1),
+                                      fillColor: Color.fromARGB(255, 209, 208, 208),
                                       border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
                                         borderSide: BorderSide.none,
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(4),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
+                                        borderSide: const BorderSide(
+                                          color: _kJoinPink,
+                                          width: 2,
                                         ),
                                       ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 16,
                                       ),
                                     ),
                                     style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                                      fontSize: 18,
+                                      color: Color(0xFF1A1A2E),
+                                      fontWeight: FontWeight.w100,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                   const SizedBox(height: 18),
@@ -257,29 +266,36 @@ class _JoinScreenState extends State<JoinScreen> {
                                       LengthLimitingTextInputFormatter(6),
                                     ],
                                     textAlign: TextAlign.left,
-                                    decoration: const InputDecoration(
+                                    cursorColor: _kJoinPink,
+                                    decoration: InputDecoration(
                                       hintText: 'bijvoorbeeld: 3WJ5EP',
-                                      hintStyle: TextStyle(
-                                        color: Color(0xFF9E9E9E),
-                                        fontSize: 18,
-                                      ),
                                       filled: true,
-                                      fillColor: Color(0xFFE6E1E1),
+                                      fillColor: Color.fromARGB(255, 209, 208, 208),
                                       border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
                                         borderSide: BorderSide.none,
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(4),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(7),
+                                        borderSide: const BorderSide(
+                                          color: _kJoinPink,
+                                          width: 2,
                                         ),
                                       ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 16,
                                       ),
                                     ),
                                     style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                                      fontSize: 18,
+                                      color: Color(0xFF1A1A2E),
+                                      fontWeight: FontWeight.w100,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                 ],

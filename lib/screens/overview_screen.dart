@@ -255,6 +255,8 @@ extension _SituationItemIcons on _SituationItem {
   IconData get icon => switch (title) {
         'Speeltuin' => Icons.park_outlined,
         'Skatepark' => Icons.skateboarding,
+        'Skatebaan' => Icons.skateboarding,
+        'Test' => Icons.text_snippet_outlined,
         'Voetbalveld' => Icons.sports_soccer_outlined,
         _ => Icons.image_outlined,
       };
