@@ -68,22 +68,6 @@ class ConfigScreen extends StatelessWidget {
               IgnorePointer(
                 child: Stack(
                   children: [
-                    // Eyebrow label
-                    Positioned(
-                      top: topPad + 74,
-                      left: 0, right: 0,
-                      child: const Text(
-                        'HOE WIL JE SPELEN?',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 2.5,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
                     // HOST content (pink half)
                     Positioned(
                       top: topPad + 114,

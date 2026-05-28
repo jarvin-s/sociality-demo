@@ -364,76 +364,82 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                             .backButtonTooltip,
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-                      decoration: BoxDecoration(
-                        color: _kStoryCardBeige,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _sceneTitle,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: _kStoryPink,
-                              height: 1.25,
-                            ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                      child: Center(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+                          decoration: BoxDecoration(
+                            color: _kStoryCardBeige,
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          const SizedBox(height: 14),
-                          Text(
-                            _situationText,
-                            style: TextStyle(
-                              fontSize: 15,
-                              height: 1.45,
-                              color: Colors.black.withValues(alpha: 0.98),
-                            ),
-                          ),
-                          if (_isGameComplete) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _sceneTitle,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kStoryPink,
+                                  height: 1.25,
+                                ),
                               ),
-                              decoration: BoxDecoration(
-                                color: _kStoryPink,
-                                borderRadius: BorderRadius.circular(8),
+                              const SizedBox(height: 14),
+                              Text(
+                                _situationText,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.45,
+                                  color: Colors.black.withValues(alpha: 0.98),
+                                ),
                               ),
-                              child: const Row(
-                                children: [
-                                  Icon(
-                                    Icons.emoji_events_rounded,
-                                    color: Colors.white,
-                                    size: 28,
+                              if (_isGameComplete) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
                                   ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Gefeliciteerd! Jullie hebben het verhaal voltooid.',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
+                                  decoration: BoxDecoration(
+                                    color: _kStoryPink,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(
+                                        Icons.emoji_events_rounded,
                                         color: Colors.white,
-                                        height: 1.35,
+                                        size: 28,
                                       ),
-                                    ),
+                                      SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'Gefeliciteerd! Jullie hebben het verhaal voltooid.',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const Expanded(child: SizedBox.shrink()),
                   _buildBottomPanel(context),
                 ],
               ),
@@ -463,7 +469,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       width: double.infinity,
       decoration: const BoxDecoration(
         color: _kStoryCardBeige,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       padding: EdgeInsets.fromLTRB(
         22,
