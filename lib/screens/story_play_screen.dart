@@ -330,8 +330,6 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   List<CardOptionSnapshot> get _options => _currentCard?.options ?? [];
 
-  /// Returns the `X/Y` label (votes for option / total players) once all
-  /// votes are in, or `null` when counts shouldn't be shown yet.
   String? _voteCountLabel(int optionId) {
     if (!_allVotesIn) return null;
     final total = _players.length;
