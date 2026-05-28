@@ -5,8 +5,7 @@ import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/story_play_screen.dart';
 import 'package:sociality/services/player_identity.dart';
 
-const Color _kGuestLobbyNavy = Color(0xFF2A337E);
-const Color _kGuestLobbyPink = Color(0xFFE9338F);
+const Color _kNavyDeep = Color(0xFF1F2070);
 
 class GuestLobbyScreen extends StatefulWidget {
   const GuestLobbyScreen({
@@ -30,14 +29,22 @@ class _GuestLobbyScreenState extends State<GuestLobbyScreen> {
   late GameSessionSnapshot _snapshot;
   Timer? _pollTimer;
   bool _navigatedToPlay = false;
+  String? _playerName;
 
   @override
   void initState() {
     super.initState();
     _snapshot = widget.initialSnapshot;
+    _loadPlayerName();
     _maybeEnterGameplay(_snapshot);
     _pollTimer = Timer.periodic(_pollInterval, (_) => _refreshSession());
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshSession());
+  }
+
+  Future<void> _loadPlayerName() async {
+    final player = await loadPlayerIdentity();
+    if (!mounted) return;
+    setState(() => _playerName = player?.name);
   }
 
   @override
@@ -58,7 +65,7 @@ class _GuestLobbyScreenState extends State<GuestLobbyScreen> {
       setState(() => _snapshot = next);
       _maybeEnterGameplay(next);
     } catch (_) {
-      // Keep showing last snapshot; next poll retries (multi-device resilience).
+      // Keep polling; next attempt retries.
     }
   }
 
@@ -81,140 +88,66 @@ class _GuestLobbyScreenState extends State<GuestLobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final labels =
-        _snapshot.participantLabels(selfPlayerId: widget.selfPlayerId);
-    final count = labels.length;
+    final topPad = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
-      backgroundColor: _kGuestLobbyNavy,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                color: Colors.white,
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Je bent in de wachtkamer',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Wacht tot de host het spel start.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.35,
-                        color: Colors.white.withValues(alpha: 0.92),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'Spelcode',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.joinCode.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Deelnemers',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '$count ${count == 1 ? 'persoon' : 'personen'} in de sessie',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white.withValues(alpha: 0.95),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      alignment: WrapAlignment.start,
-                      spacing: 12,
-                      runSpacing: 10,
-                      children: labels
-                          .map(
-                            (name) => Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: _kNavyDeep,
+      body: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: _kGuestLobbyPink.withValues(alpha: 0.9),
+                  Text(
+                    _playerName ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -2,
+                      height: 0.93,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(height: 14),
                   Text(
-                    'Live bijgewerkt',
+                    'Wacht tot de host het spel start.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 15,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      height: 1.35,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            top: topPad + 12,
+            left: 20,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).maybePop(),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 const Color _kPink = Color(0xFFEA1F86);
 const Color _kNavyDeep = Color(0xFF1F2070);
-const Color _kPinkLight = Color(0xFFFF67B5);
-const Color _kPinkDeep = Color(0xFFB91569);
 
 class _WedgeClipper extends CustomClipper<Path> {
   const _WedgeClipper(this.rightCut);
@@ -31,7 +29,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
-  bool _pressed = false;
 
   @override
   void initState() {
@@ -85,18 +82,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'WELKOM',
-                        style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 2.5,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                       const SizedBox(height: 10),
                       const Text(
-                        'Leer elkaar\nkennen.',
+                        'Ontdek elkaars keuzes.',
                         style: TextStyle(
                           fontSize: 56,
                           fontWeight: FontWeight.w800,
@@ -134,7 +122,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       children: [
                         _FeatureRow(
                           icon: Icons.people_rounded,
-                          iconBg: _kPink,
+                          iconBg: Colors.white.withValues(alpha: 0.12),
+                          iconBorder: true,
                           title: 'Speel samen',
                           subtitle: 'Geschikt voor groepen van alle groottes',
                         ),
@@ -158,7 +147,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         Text(
                           '*Fysiek bordspel is nodig om deze app te gebruiken.',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 14,
                             color: Colors.white.withValues(alpha: 0.4),
                             height: 1.4,
                           ),
@@ -287,7 +276,7 @@ class _NextButtonState extends State<_NextButton> {
           height: 60,
           decoration: BoxDecoration(
             color: _kPink,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(50),
           ),
           alignment: Alignment.center,
           child: const Row(
@@ -303,7 +292,6 @@ class _NextButtonState extends State<_NextButton> {
                 ),
               ),
               SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
             ],
           ),
         ),
