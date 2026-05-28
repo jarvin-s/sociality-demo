@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+const Color _kPink = Color(0xFFEA1F86);
+const Color _kNavyDeep = Color(0xFF1F2070);
+const Color _kPinkLight = Color(0xFFFF67B5);
+const Color _kPinkDeep = Color(0xFFB91569);
+
+class _WedgeClipper extends CustomClipper<Path> {
+  const _WedgeClipper(this.rightCut);
+  final double rightCut;
+
+  @override
+  Path getClip(Size size) => Path()
+    ..lineTo(size.width, 0)
+    ..lineTo(size.width, size.height * rightCut)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_WedgeClipper o) => o.rightCut != rightCut;
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -10,59 +30,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-
   final _player = AudioPlayer();
-
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
-
-  bool _isPressed = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
+    _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _scale = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack),
     );
-
-    _controller.forward();
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
     _player.dispose();
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
-  }
-
-  // Called when finger touches button
-  void _onTapDown(TapDownDetails details) {
-    setState(() {
-      _isPressed = true;
-    });
-  }
-
-  // Called when finger lifts off button
-  void _onTapUp(TapUpDetails details) {
-    setState(() {
-      _isPressed = false;
-    });
-  }
-
-  // Called if finger slides off button
-  void _onTapCancel() {
-    setState(() {
-      _isPressed = false;
-    });
   }
 
   void _navigate() {
@@ -72,114 +63,148 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background_blue.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
+      backgroundColor: _kNavyDeep,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight;
+          return Stack(
             children: [
-
-              Center(
+              // Logo + brand
+              Positioned(
+                top: topPad + 75,
+                left: 0, right: 0,
                 child: FadeTransition(
-                  opacity: _fadeAnim,
+                  opacity: _fade,
                   child: ScaleTransition(
-                    scale: _scaleAnim,
+                    scale: _scale,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
                         Image.asset(
                           'assets/images/logo.png',
-                          width: 250,
-                          height: 230,
+                          width: 180,
+                          height: 165,
+                          fit: BoxFit.contain,
                         ),
-
-                        const SizedBox(height: 40),
-
-                        // Speel nu button
-                        GestureDetector(
-                          onTap: _navigate,
-                          onTapDown: _onTapDown,
-                          onTapUp: _onTapUp,
-                          onTapCancel: _onTapCancel,
-
-                          child: AnimatedScale(
-                            scale: _isPressed ? 0.95 : 1.0,
-                            duration: const Duration(milliseconds: 100),
-                            curve: Curves.easeOut,
-
-                            child: SizedBox(
-                              width: 190,
-                              height: 42,
-                              child: Stack(
-                                children: [
-
-                                  AnimatedPositioned(
-                                    duration: const Duration(milliseconds: 100),
-                                    bottom: _isPressed ? 2 : 0,
-                                    left: 3,
-                                    right: 0,
-                                    child: Container(
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromARGB(255, 182, 6, 100),
-                                        borderRadius: BorderRadius.circular(50),
-                                      ),
-                                    ),
-                                  ),
-
-                                  AnimatedPositioned(
-                                    duration: const Duration(milliseconds: 100),
-                                    top: _isPressed ? 2 : 0,
-                                    left: 0,
-                                    right: 3,
-                                    child: Container(
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE82A91),
-                                        borderRadius: BorderRadius.circular(50),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: const Text(
-                                        'Speel nu',
-                                        style: TextStyle(
-                                          fontSize: 23,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                ],
-                              ),
-                            ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'DOOR INNERGAMES',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.5,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-
                       ],
                     ),
                   ),
                 ),
               ),
 
-              // Footer pinned to the bottom of the screen
-              const Positioned(
-                bottom: 16,
-                left: 0,
-                right: 0,
-                child: Text(
-                  'InnerGames Sociality ©',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 14),
+              // Bottom content in navy section
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(28, 0, 28, 44 + bottomPad),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Verbindt mensen.\nBrengt verhalen.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                            color: Colors.white,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Vragen & opdrachten voor groepen',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.6),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        _BigButton(label: 'Speel nu', onTap: _navigate),
+                        const SizedBox(height: 22),
+                        Text(
+                          'INNERGAMES SOCIALITY ©',
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 1.5,
+                            color: Colors.white.withValues(alpha: 0.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
 
+class _BigButton extends StatefulWidget {
+  const _BigButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_BigButton> createState() => _BigButtonState();
+}
+
+class _BigButtonState extends State<_BigButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: double.infinity,
+          height: 60,
+          decoration: BoxDecoration(
+            color: _kPink,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          alignment: Alignment.center,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Speel nu',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
             ],
           ),
         ),
