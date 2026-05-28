@@ -191,7 +191,6 @@ class LobbyQrDisplay extends StatelessWidget {
   }
 }
 
-/// Single grouped panel: header with count + list of joined players.
 class LobbyParticipantsGroup extends StatelessWidget {
   const LobbyParticipantsGroup({super.key, required this.names});
 
