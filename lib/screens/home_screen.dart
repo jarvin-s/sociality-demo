@@ -46,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -55,34 +54,18 @@ class _HomeScreenState extends State<HomeScreen>
         builder: (context, constraints) {
           return Stack(
             children: [
-              // Logo + brand
-              Positioned(
-                top: topPad + 75,
-                left: 0, right: 0,
+              Positioned.fill(
                 child: FadeTransition(
                   opacity: _fade,
                   child: ScaleTransition(
                     scale: _scale,
-                    child: Column(
-                      children: [
-                        Image.asset(
-                          'assets/images/logo.png',
-                          width: 180,
-                          height: 165,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Door InnerGames',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 180,
+                        height: 165,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),

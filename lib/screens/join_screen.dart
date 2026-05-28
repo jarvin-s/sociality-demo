@@ -5,7 +5,8 @@ import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/guest_lobby_screen.dart';
 import 'package:sociality/services/player_identity.dart';
 
-const Color _kJoinPink = Color(0xFFE93D81);
+const Color _kPink = Color(0xFFEA1F86);
+const Color _kNavyDeep = Color(0xFF1F2070);
 
 class JoinCodeFormatter extends TextInputFormatter {
   @override
@@ -31,19 +32,16 @@ class JoinScreen extends StatefulWidget {
   State<JoinScreen> createState() => _JoinScreenState();
 }
 
-class _JoinScreenState extends State<JoinScreen> {
+class _JoinScreenState extends State<JoinScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
-  bool isScanning = false;
+  bool _isScanning = false;
   bool _hasScanned = false;
-  bool _qrScanned = false;
   bool _joinBusy = false;
-  bool _isPressed = false;
-  bool _scanPressed = false;
-  bool _cancelPressed = false;
 
-  // When true, everything animates into its final position
-  bool _visible = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
@@ -52,17 +50,19 @@ class _JoinScreenState extends State<JoinScreen> {
     if (prefill != null && prefill.trim().isNotEmpty) {
       _codeController.text = normalizeJoinCodeTyping(prefill);
     }
-
-    // Wait one frame, then trigger all animations
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _visible = true);
-    });
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _codeController.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -121,539 +121,549 @@ class _JoinScreenState extends State<JoinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF273583),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: _kNavyDeep,
+      resizeToAvoidBottomInset: true,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight;
+
+          return Stack(
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  color: Colors.white,
-                  tooltip:
-                      MaterialLocalizations.of(context).backButtonTooltip,
-                ),
               ),
-              Center(
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  width: 184,
-                  height: 184,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(height: 10),
 
-                // Title + subtitle
-                AnimatedOpacity(
-                  opacity: _visible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 400),
-                  child: const Column(
-                    children: [
-                      Text(
-                        'Hoe wil je deelnemen?',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+              Positioned.fill(
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      28,
+                      topPad + 90,
+                      28,
+                      24 + bottomPad,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Meedoen',
+                          style: TextStyle(
+                            fontSize: 56,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -2,
+                            height: 0.93,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Voer je naam en de 6-teken spelcode in, of scan de QR-code.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 25),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Voer je naam en spelcode in, of scan de QR-code van de host.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            height: 1.35,
+                          ),
+                        ),
 
-                // Name + code box
-                AnimatedSlide(
-                  offset: _visible ? Offset.zero : const Offset(0, 0.3),
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedOpacity(
-                    opacity: _visible ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 400),
-                    child: AnimatedSize(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      child: isScanning
-                          ? const SizedBox.shrink()
-                          : Container(
+                        SizedBox(height: h * 0.14),
+
+                        _FieldLabel('Jouw naam'),
+                        const SizedBox(height: 8),
+                        _JoinTextField(
+                          controller: _nameController,
+                          hint: 'bijvoorbeeld: Sam',
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                        ),
+
+                        const SizedBox(height: 18),
+                        _FieldLabel('Spelcode (6 tekens)'),
+                        const SizedBox(height: 8),
+                        _JoinCodeBoxes(
+                          controller: _codeController,
+                          onCompleted: () {
+                            if (!_joinBusy) _attemptJoin();
+                          },
+                        ),
+
+                        const SizedBox(height: 22),
+                        _ScanRow(
+                          isScanning: _isScanning,
+                          onToggle: () => setState(() {
+                            _isScanning = !_isScanning;
+                            if (!_isScanning) _hasScanned = false;
+                          }),
+                        ),
+
+                        if (_isScanning) ...[
+                          const SizedBox(height: 14),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: SizedBox(
                               width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 18),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  const Text(
-                                    'Jouw naam',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _nameController,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                    textInputAction: TextInputAction.next,
-                                    cursorColor: _kJoinPink,
-                                    decoration: InputDecoration(
-                                      hintText: 'bijvoorbeeld: Sam',
-                                      filled: true,
-                                      fillColor: Color.fromARGB(255, 209, 208, 208),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: const BorderSide(
-                                          color: _kJoinPink,
-                                          width: 2,
+                              height: 280,
+                              child: MobileScanner(
+                                onDetect: (capture) {
+                                  if (_hasScanned || _joinBusy) return;
+                                  final String? raw =
+                                      capture.barcodes.first.rawValue;
+                                  if (raw == null) return;
+                                  final parsed =
+                                      parseJoinCodeFromQrOrText(raw);
+                                  if (parsed == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Geen geldige spelcode in deze QR-code.',
                                         ),
                                       ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 16,
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      color: Color(0xFF1A1A2E),
-                                      fontWeight: FontWeight.w100,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 18),
-                                  const Text(
-                                    'Spelcode (6 tekens)',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _codeController,
-                                    keyboardType: TextInputType.text,
-                                    textCapitalization:
-                                        TextCapitalization.characters,
-                                    inputFormatters: <TextInputFormatter>[
-                                      JoinCodeFormatter(),
-                                      LengthLimitingTextInputFormatter(6),
-                                    ],
-                                    textAlign: TextAlign.left,
-                                    cursorColor: _kJoinPink,
-                                    decoration: InputDecoration(
-                                      hintText: 'bijvoorbeeld: 3WJ5EP',
-                                      filled: true,
-                                      fillColor: Color.fromARGB(255, 209, 208, 208),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: const BorderSide(
-                                          color: _kJoinPink,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 16,
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      color: Color(0xFF1A1A2E),
-                                      fontWeight: FontWeight.w100,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                                    );
+                                    return;
+                                  }
+                                  setState(() {
+                                    _hasScanned = true;
+                                    _isScanning = false;
+                                    _codeController.text = parsed;
+                                  });
+                                  _attemptJoin(scannedPayload: raw);
+                                },
                               ),
                             ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 32),
+                        _NextButton(
+                          label: 'Meedoen',
+                          busy: _joinBusy,
+                          onTap: _attemptJoin,
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
-                if (!_qrScanned) ...[
-                  const SizedBox(height: 16),
-
-                  // QR box
-                  AnimatedSlide(
-                    offset: _visible ? Offset.zero : const Offset(0, 0.3),
-                    duration: const Duration(milliseconds: 700),
-                    curve: Curves.easeOutCubic,
-                    child: AnimatedOpacity(
-                      opacity: _visible ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 600),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeInOut,
-                        width: double.infinity,
-                        height: isScanning ? 420 : 155,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: SingleChildScrollView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Scan QR-code',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              if (isScanning)
-                                Column(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: SizedBox(
-                                        width: 247,
-                                        height: 300,
-                                        child: MobileScanner(
-                                          onDetect: (capture) {
-                                            if (_hasScanned || _joinBusy) {
-                                              return;
-                                            }
-                                            final String? raw = capture
-                                                .barcodes.first.rawValue;
-                                            if (raw == null) return;
-                                            final parsed =
-                                                parseJoinCodeFromQrOrText(raw);
-                                            if (parsed == null) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Geen geldige spelcode in deze QR-code.',
-                                                  ),
-                                                ),
-                                              );
-                                              return;
-                                            }
-                                            setState(() {
-                                              _hasScanned = true;
-                                              _qrScanned = true;
-                                              isScanning = false;
-                                              _codeController.text = parsed;
-                                            });
-                                            _attemptJoin(scannedPayload: raw);
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 20),
-                                      child: GestureDetector(
-                                        onTap: () => setState(() {
-                                          isScanning = false;
-                                          _hasScanned = false;
-                                        }),
-                                        onTapDown: (_) => setState(
-                                          () => _cancelPressed = true,
-                                        ),
-                                        onTapUp: (_) => setState(
-                                          () => _cancelPressed = false,
-                                        ),
-                                        onTapCancel: () => setState(
-                                          () => _cancelPressed = false,
-                                        ),
-                                        child: AnimatedScale(
-                                          scale: _cancelPressed ? 0.98 : 1.0,
-                                          duration: const Duration(
-                                            milliseconds: 100,
-                                          ),
-                                          child: SizedBox(
-                                            width: 189,
-                                            height: 42,
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                Positioned(
-                                                  bottom: 0,
-                                                  left: 3,
-                                                  right: 0,
-                                                  child: Container(
-                                                    height: 38,
-                                                    decoration:
-                                                        BoxDecoration(
-                                                      color: const Color
-                                                          .fromARGB(
-                                                        255,
-                                                        182,
-                                                        6,
-                                                        100,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius
-                                                              .circular(50),
-                                                    ),
-                                                  ),
-                                                ),
-                                                AnimatedPositioned(
-                                                  duration: const Duration(
-                                                    milliseconds: 100,
-                                                  ),
-                                                  top: _cancelPressed ? 4 : 0,
-                                                  left: 0,
-                                                  right:
-                                                      _cancelPressed ? 0 : 3,
-                                                  child: Container(
-                                                    height: 38,
-                                                    decoration:
-                                                        BoxDecoration(
-                                                      color: const Color(
-                                                        0xFFE82A91,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius
-                                                              .circular(50),
-                                                    ),
-                                                    alignment: Alignment.center,
-                                                    child: const Text(
-                                                      'Annuleren',
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: 20),
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => isScanning = true),
-                                    onTapDown: (_) =>
-                                        setState(() => _scanPressed = true),
-                                    onTapUp: (_) =>
-                                        setState(() => _scanPressed = false),
-                                    onTapCancel: () =>
-                                        setState(() => _scanPressed = false),
-                                    child: AnimatedScale(
-                                      scale: _scanPressed ? 0.98 : 1.0,
-                                      duration:
-                                          const Duration(milliseconds: 100),
-                                      child: SizedBox(
-                                        width: 189,
-                                        height: 42,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Positioned(
-                                              bottom: 0,
-                                              left: 3,
-                                              right: 0,
-                                              child: Container(
-                                                height: 38,
-                                                decoration: BoxDecoration(
-                                                  color: const Color.fromARGB(
-                                                    255,
-                                                    182,
-                                                    6,
-                                                    100,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                    50,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            AnimatedPositioned(
-                                              duration: const Duration(
-                                                milliseconds: 100,
-                                              ),
-                                              top: _scanPressed ? 4 : 0,
-                                              left: 0,
-                                              right: _scanPressed ? 0 : 3,
-                                              child: Container(
-                                                height: 38,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFFE82A91),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                    50,
-                                                  ),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: const Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .qr_code_scanner_rounded,
-                                                      color: Colors.white,
-                                                      size: 20,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      'Tik om te scannen',
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+              Positioned(
+                top: topPad + 12,
+                left: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 22,
                       ),
                     ),
                   ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: Colors.white.withValues(alpha: 0.7),
+        letterSpacing: 0.3,
+      ),
+    );
+  }
+}
+
+class _JoinTextField extends StatelessWidget {
+  const _JoinTextField({
+    required this.controller,
+    required this.hint,
+    this.textCapitalization = TextCapitalization.none,
+    this.textInputAction,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final TextCapitalization textCapitalization;
+  final TextInputAction? textInputAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textCapitalization: textCapitalization,
+      textInputAction: textInputAction,
+      cursorColor: _kPink,
+      style: const TextStyle(
+        fontSize: 18,
+        color: Colors.white,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.4),
+          fontStyle: FontStyle.italic,
+          letterSpacing: 0,
+        ),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.08),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _kPink, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
+        ),
+      ),
+    );
+  }
+}
+
+const int _kJoinCodeLength = 6;
+
+class _JoinCodeBoxes extends StatefulWidget {
+  const _JoinCodeBoxes({
+    required this.controller,
+    required this.onCompleted,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onCompleted;
+
+  @override
+  State<_JoinCodeBoxes> createState() => _JoinCodeBoxesState();
+}
+
+class _JoinCodeBoxesState extends State<_JoinCodeBoxes> {
+  final FocusNode _focus = FocusNode();
+  int _lastLength = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastLength = widget.controller.text.length;
+    widget.controller.addListener(_onChanged);
+    _focus.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChanged);
+    _focus.removeListener(_onFocusChanged);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onChanged() {
+    if (!mounted) return;
+    final len = widget.controller.text.length;
+    final justCompleted =
+        len >= _kJoinCodeLength && _lastLength < _kJoinCodeLength;
+    _lastLength = len;
+    setState(() {});
+    if (justCompleted) {
+      _focus.unfocus();
+      widget.onCompleted();
+    }
+  }
+
+  void _activate() {
+    if (!_focus.hasFocus) {
+      FocusScope.of(context).requestFocus(_focus);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.controller.text;
+    final hasFocus = _focus.hasFocus;
+    final activeIndex = text.length >= _kJoinCodeLength
+        ? _kJoinCodeLength - 1
+        : text.length;
+
+    return Stack(
+      children: [
+        Offstage(
+          offstage: false,
+          child: SizedBox(
+            width: 1,
+            height: 1,
+            child: Opacity(
+              opacity: 0,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                autofocus: false,
+                showCursor: false,
+                enableSuggestions: false,
+                autocorrect: false,
+                enableInteractiveSelection: false,
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: <TextInputFormatter>[
+                  JoinCodeFormatter(),
+                  LengthLimitingTextInputFormatter(_kJoinCodeLength),
                 ],
-
-                const SizedBox(height: 40),
-
-                // Meedoen button
-                AnimatedSlide(
-                  offset: _visible ? Offset.zero : const Offset(0, 1),
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedOpacity(
-                    opacity: _visible ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 800),
-                    child: Opacity(
-                      opacity: _joinBusy ? 0.55 : 1,
-                      child: GestureDetector(
-                        onTap: _joinBusy ? null : () => _attemptJoin(),
-                        onTapDown: (_) => setState(() => _isPressed = true),
-                        onTapUp: (_) => setState(() => _isPressed = false),
-                        onTapCancel: () =>
-                            setState(() => _isPressed = false),
-                        child: AnimatedScale(
-                          scale: _isPressed ? 0.98 : 1.0,
-                          duration: const Duration(milliseconds: 100),
-                          child: SizedBox(
-                            width: 189,
-                            height: 42,
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  bottom: 0,
-                                  left: 3,
-                                  right: 0,
-                                  child: Container(
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: const Color.fromARGB(
-                                          255, 182, 6, 100),
-                                      borderRadius:
-                                          BorderRadius.circular(50),
-                                    ),
-                                  ),
-                                ),
-                                AnimatedPositioned(
-                                  duration:
-                                      const Duration(milliseconds: 100),
-                                  top: _isPressed ? 4 : 0,
-                                  left: 0,
-                                  right: _isPressed ? 0 : 3,
-                                  child: Container(
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE82A91),
-                                      borderRadius:
-                                          BorderRadius.circular(50),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: _joinBusy
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child:
-                                                CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Meedoen',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+              ),
+            ),
+          ),
+        ),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _activate,
+          child: Row(
+            children: [
+              for (var i = 0; i < _kJoinCodeLength; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _CodeBox(
+                    char: i < text.length ? text[i] : '',
+                    isFilled: i < text.length,
+                    isActive: hasFocus && i == activeIndex,
                   ),
                 ),
-
-                const SizedBox(height: 40),
               ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CodeBox extends StatelessWidget {
+  const _CodeBox({
+    required this.char,
+    required this.isFilled,
+    required this.isActive,
+  });
+
+  final String char;
+  final bool isFilled;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isActive
+        ? _kPink
+        : Colors.white.withValues(alpha: isFilled ? 0.25 : 0.1);
+    final borderWidth = isActive ? 2.0 : 1.0;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: isFilled ? 0.12 : 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: borderWidth),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        char,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+          letterSpacing: 0,
+          height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanRow extends StatefulWidget {
+  const _ScanRow({required this.isScanning, required this.onToggle});
+  final bool isScanning;
+  final VoidCallback onToggle;
+
+  @override
+  State<_ScanRow> createState() => _ScanRowState();
+}
+
+class _ScanRowState extends State<_ScanRow> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onToggle,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
             ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _kPink,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.qr_code_scanner_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.isScanning ? 'Stop scannen' : 'Scan QR-code',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.isScanning
+                          ? 'Tik om te annuleren'
+                          : 'Open de camera om te scannen',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.55),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                widget.isScanning
+                    ? Icons.close_rounded
+                    : Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.4),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextButton extends StatefulWidget {
+  const _NextButton({
+    required this.label,
+    required this.onTap,
+    this.busy = false,
+  });
+  final String label;
+  final VoidCallback onTap;
+  final bool busy;
+
+  @override
+  State<_NextButton> createState() => _NextButtonState();
+}
+
+class _NextButtonState extends State<_NextButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: widget.busy ? 0.55 : 1,
+      child: GestureDetector(
+        onTap: widget.busy ? null : widget.onTap,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: Container(
+            width: double.infinity,
+            height: 60,
+            decoration: BoxDecoration(
+              color: _kPink,
+              borderRadius: BorderRadius.circular(50),
+            ),
+            alignment: Alignment.center,
+            child: widget.busy
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+          ),
         ),
       ),
     );
