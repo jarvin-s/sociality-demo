@@ -257,6 +257,7 @@ class GameSessionStarted {
     required this.players,
     this.currentCard,
     required this.allVotesIn,
+    this.votes = const <int, int>{},
   });
 
   final int id;
@@ -266,6 +267,9 @@ class GameSessionStarted {
   final List<GameSessionPlayer> players;
   final CardSnapshot? currentCard;
   final bool allVotesIn;
+
+  /// Map of playerId -> cardOptionId for the current voting round.
+  final Map<int, int> votes;
 }
 
 /// Parsed lobby or in-progress session from GET/POST session endpoints.
@@ -278,6 +282,7 @@ class GameSessionSnapshot {
     this.currentStory,
     this.currentCard,
     required this.allVotesIn,
+    this.votes = const <int, int>{},
   });
 
   final int? id;
@@ -287,6 +292,9 @@ class GameSessionSnapshot {
   final GameSessionStorySnapshot? currentStory;
   final CardSnapshot? currentCard;
   final bool allVotesIn;
+
+  /// Map of playerId -> cardOptionId for the current voting round.
+  final Map<int, int> votes;
 
   GameSessionStarted? get asStartedSessionOrNull {
     if (status != 'IN_PROGRESS') return null;
@@ -299,6 +307,7 @@ class GameSessionSnapshot {
       players: players,
       currentCard: currentCard,
       allVotesIn: allVotesIn,
+      votes: votes,
     );
   }
 
@@ -392,6 +401,7 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
   final story = _currentStorySnapshotFromJsonNullable(decoded);
   final allVotesIn = decoded['allVotesIn'] == true;
   final card = _cardSnapshotFromJsonNullable(decoded['currentCard']);
+  final votes = _votesFromJson(decoded['votingRound']);
   return GameSessionSnapshot(
     id: id,
     joinCode: join,
@@ -400,7 +410,26 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
     currentStory: story,
     currentCard: card,
     allVotesIn: allVotesIn,
+    votes: votes,
   );
+}
+
+/// Parses `votingRound.votes` (a `{playerId: cardOptionId}` map) into
+/// `Map<int, int>`. Returns an empty map when missing or malformed.
+Map<int, int> _votesFromJson(dynamic votingRoundRaw) {
+  if (votingRoundRaw is! Map) return const <int, int>{};
+  final votingRound = Map<String, dynamic>.from(votingRoundRaw);
+  final votesRaw = votingRound['votes'];
+  if (votesRaw is! Map) return const <int, int>{};
+  final out = <int, int>{};
+  votesRaw.forEach((key, value) {
+    final playerId = _intFromJson(key);
+    final optionId = _intFromJson(value);
+    if (playerId != null && optionId != null) {
+      out[playerId] = optionId;
+    }
+  });
+  return out;
 }
 
 GameSessionPlayer? _gameSessionPlayerFromJson(dynamic json) {

@@ -138,19 +138,9 @@ class _OverviewScreenState extends State<OverviewScreen>
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Headline in pink section
-                            const Text(
-                              'KIES DE SITUATIE',
-                              style: TextStyle(
-                                fontSize: 11,
-                                letterSpacing: 2.5,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                             const SizedBox(height: 10),
                             const Text(
-                              'Kies jouw\nverhaal.',
+                              'Situaties',
                               style: TextStyle(
                                 fontSize: 56,
                                 fontWeight: FontWeight.w800,
@@ -169,7 +159,7 @@ class _OverviewScreenState extends State<OverviewScreen>
                               ),
                             ),
 
-                            SizedBox(height: h * 0.18),
+                            SizedBox(height: h * 0.24),
 
                             // Cards in navy section
                             if (snapshot.connectionState == ConnectionState.waiting)

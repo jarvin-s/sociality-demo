@@ -3,23 +3,6 @@ import 'package:audioplayers/audioplayers.dart';
 
 const Color _kPink = Color(0xFFEA1F86);
 const Color _kNavyDeep = Color(0xFF1F2070);
-const Color _kPinkLight = Color(0xFFFF67B5);
-const Color _kPinkDeep = Color(0xFFB91569);
-
-class _WedgeClipper extends CustomClipper<Path> {
-  const _WedgeClipper(this.rightCut);
-  final double rightCut;
-
-  @override
-  Path getClip(Size size) => Path()
-    ..lineTo(size.width, 0)
-    ..lineTo(size.width, size.height * rightCut)
-    ..lineTo(0, size.height)
-    ..close();
-
-  @override
-  bool shouldReclip(_WedgeClipper o) => o.rightCut != rightCut;
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: _kNavyDeep,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final h = constraints.maxHeight;
           return Stack(
             children: [
               // Logo + brand
@@ -91,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'DOOR INNERGAMES',
+                          'Door InnerGames',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 11,
@@ -116,32 +98,11 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Verbindt mensen.\nBrengt verhalen.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
-                            color: Colors.white,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Vragen & opdrachten voor groepen',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.6),
-                            height: 1.4,
-                          ),
-                        ),
                         const SizedBox(height: 32),
                         _BigButton(label: 'Speel nu', onTap: _navigate),
                         const SizedBox(height: 22),
                         Text(
-                          'INNERGAMES SOCIALITY ©',
+                          'InnerGames Sociality ©',
                           style: TextStyle(
                             fontSize: 11,
                             letterSpacing: 1.5,
@@ -188,7 +149,7 @@ class _BigButtonState extends State<_BigButton> {
           height: 60,
           decoration: BoxDecoration(
             color: _kPink,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(50),
           ),
           alignment: Alignment.center,
           child: const Row(
@@ -204,7 +165,6 @@ class _BigButtonState extends State<_BigButton> {
                 ),
               ),
               SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
             ],
           ),
         ),

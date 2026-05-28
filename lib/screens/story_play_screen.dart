@@ -51,9 +51,11 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   late final Animation<Offset> _introSlide;
 
   GameSessionPlayer? _selfPlayer;
+  List<GameSessionPlayer> _players = const [];
   CardSnapshot? _currentCard;
   bool _allVotesIn = false;
   int? _lastCardId;
+  Map<int, int> _votes = const <int, int>{};
 
   bool get _isHost => _selfPlayer?.isHost ?? false;
   String get _joinCode => widget.session?.joinCode ?? '';
@@ -73,6 +75,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _currentCard = widget.session?.currentCard;
     _allVotesIn = widget.session?.allVotesIn ?? false;
     _lastCardId = _currentCard?.id;
+    _players = widget.session?.players ?? const [];
+    _votes = widget.session?.votes ?? const <int, int>{};
 
     _loadIdentityAndStartPolling();
   }
@@ -102,6 +106,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       setState(() {
         _currentCard = newCard;
         _allVotesIn = snap.allVotesIn;
+        _votes = snap.votes;
+        if (snap.players.isNotEmpty) _players = snap.players;
 
         if (cardChanged) {
           _lastCardId = newCard.id;
@@ -120,6 +126,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _debateVoteChoice = null;
     _submittingVote = false;
     _submittingChoose = false;
+    _votes = const <int, int>{};
     _debateTimer?.cancel();
   }
 
@@ -162,6 +169,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       setState(() {
         _submittingVote = false;
         _allVotesIn = snap.allVotesIn;
+        _votes = snap.votes;
+        if (snap.players.isNotEmpty) _players = snap.players;
         _phase = snap.allVotesIn
             ? (_isHost ? _GamePhase.results : _GamePhase.waitingForHost)
             : _GamePhase.waitingForVotes;
@@ -195,6 +204,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       setState(() {
         _submittingVote = false;
         _allVotesIn = snap.allVotesIn;
+        _votes = snap.votes;
+        if (snap.players.isNotEmpty) _players = snap.players;
         _phase = snap.allVotesIn
             ? (_isHost ? _GamePhase.results : _GamePhase.waitingForHost)
             : _GamePhase.waitingForRevotes;
@@ -284,6 +295,16 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   }
 
   List<CardOptionSnapshot> get _options => _currentCard?.options ?? [];
+
+  /// Returns the `X/Y` label (votes for option / total players) once all
+  /// votes are in, or `null` when counts shouldn't be shown yet.
+  String? _voteCountLabel(int optionId) {
+    if (!_allVotesIn) return null;
+    final total = _players.length;
+    if (total == 0) return null;
+    final count = _votes.values.where((v) => v == optionId).length;
+    return '$count/$total';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,6 +510,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               label: opts[i].optionText,
               isSelected: false,
               isDisabled: _submittingChoose,
+              voteCountLabel: _voteCountLabel(opts[i].id),
               onPressed: _submittingChoose ? null : () => _submitChoose(opts[i].id),
             ),
           ],
@@ -797,6 +819,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               label: opt.optionText,
               isSelected: false,
               isDisabled: true,
+              voteCountLabel: _voteCountLabel(opt.id),
               onPressed: null,
             ),
           ),
@@ -911,12 +934,14 @@ class _StoryChoiceButton extends StatelessWidget {
     required this.isSelected,
     required this.isDisabled,
     required this.onPressed,
+    this.voteCountLabel,
   });
 
   final String label;
   final bool isSelected;
   final bool isDisabled;
   final VoidCallback? onPressed;
+  final String? voteCountLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -939,28 +964,53 @@ class _StoryChoiceButton extends StatelessWidget {
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 88),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          height: 1.35,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 22),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (voteCountLabel != null)
+                    Positioned(
+                      top: 8,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          voteCountLabel!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
-                    if (isSelected) ...[
-                      const SizedBox(width: 8),
-                      const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 22),
-                    ],
-                  ],
-                ),
+                ],
               ),
             ),
           ),
