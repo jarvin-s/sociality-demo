@@ -82,7 +82,7 @@ sociality/
 
 **1. Clone the repo**
 ```bash
-git clone <your-repo-url>
+git clone https://git.fhict.nl/I553467/sociality
 cd sociality
 ```
 
