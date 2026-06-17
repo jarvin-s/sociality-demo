@@ -210,11 +210,14 @@ class CardOptionSnapshot {
   const CardOptionSnapshot({
     required this.id,
     required this.optionText,
+    this.intervention,
     this.destinationCard,
   });
 
   final int id;
   final String optionText;
+
+  final String? intervention;
   final CardSnapshot? destinationCard;
 }
 
@@ -223,14 +226,12 @@ class CardSnapshot {
     required this.id,
     required this.title,
     required this.situation,
-    this.intervention,
     this.options = const <CardOptionSnapshot>[],
   });
 
   final int id;
   final String title;
   final String situation;
-  final String? intervention;
   final List<CardOptionSnapshot> options;
 
   bool get isLastRound {
@@ -370,14 +371,27 @@ CardSnapshot? _cardSnapshotFromJsonNullable(dynamic raw) {
       if (parsed != null) options.add(parsed);
     }
   }
-  final intervention = m['intervention'];
   return CardSnapshot(
     id: id,
     title: title.trim(),
     situation: situation.trim(),
-    intervention: intervention is String ? intervention.trim() : null,
     options: options,
   );
+}
+
+String? _interventionCodeFromJson(dynamic raw) {
+  if (raw is String) {
+    final code = raw.trim();
+    return code.isEmpty ? null : code;
+  }
+  if (raw is Map) {
+    final m = Map<String, dynamic>.from(raw);
+    for (final key in <String>['name', 'code', 'id']) {
+      final v = m[key];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+  }
+  return null;
 }
 
 CardOptionSnapshot? _cardOptionSnapshotFromJsonNullable(dynamic raw) {
@@ -390,8 +404,15 @@ CardOptionSnapshot? _cardOptionSnapshotFromJsonNullable(dynamic raw) {
   return CardOptionSnapshot(
     id: id,
     optionText: optionText.trim(),
+    intervention: _interventionCodeFromJson(m['intervention']),
     destinationCard: destCard,
   );
+}
+
+String? interventionImageAssetPath(String? interventionCode) {
+  final code = interventionCode?.trim();
+  if (code == null || code.isEmpty) return null;
+  return 'assets/images/interventions/$code.jpeg';
 }
 
 GameSessionSnapshot _gameSessionSnapshotFromJson(

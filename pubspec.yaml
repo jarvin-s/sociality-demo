@@ -72,6 +72,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
   - assets/images/
+  - assets/images/interventions/
   - assets/crown.svg
   - assets/sounds/click.wav
   
