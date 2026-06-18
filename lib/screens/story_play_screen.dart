@@ -3,10 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/services/player_identity.dart';
 
-const Color _kStoryNavy = Color(0xFF29367C);
-const Color _kStoryPink = Color(0xFFE4318C);
-const Color _kStoryCardBeige = Color(0xFFF5E9DF);
-const Color _kStorySelectedBorder = Color(0xFF2ECC71);
+const Color _kPink = Color(0xFFEA1F86);
+const Color _kNavyDeep = Color(0xFF1F2070);
+const Color _kPanelSurface = Color(0xFFF5E9DF);
+const Color _kSelectedBorder = Color(0xFF2ECC71);
+
+class _WedgeClipper extends CustomClipper<Path> {
+  const _WedgeClipper(this.rightCut);
+  final double rightCut;
+
+  @override
+  Path getClip(Size size) => Path()
+    ..lineTo(size.width, 0)
+    ..lineTo(size.width, size.height * rightCut)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_WedgeClipper o) => o.rightCut != rightCut;
+}
 
 enum _GamePhase {
   choosing,
@@ -56,6 +71,11 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   bool _allVotesIn = false;
   int? _lastCardId;
   Map<int, int> _votes = const <int, int>{};
+  bool _areVotesLocked = false;
+
+  String? _interventionCode;
+  CardSnapshot? _pendingNextCard;
+  bool _pendingEndGame = false;
 
   bool get _isHost => _selfPlayer?.isHost ?? false;
   String get _joinCode => widget.session?.joinCode ?? '';
@@ -94,9 +114,12 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _lastCardId = _currentCard?.id;
     _players = widget.session?.players ?? const [];
     _votes = widget.session?.votes ?? const <int, int>{};
+    _areVotesLocked = widget.session?.areVotesLocked ?? false;
 
     if (_isLastRoundCard(_currentCard) && (_currentCard?.options.isEmpty ?? true)) {
       _phase = _GamePhase.finalResult;
+    } else if (_areVotesLocked) {
+      _phase = _GamePhase.results;
     }
 
     _loadIdentityAndStartPolling();
@@ -116,7 +139,9 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   }
 
   Future<void> _poll() async {
-    if (!mounted || _joinCode.isEmpty || _isGameComplete) return;
+    if (!mounted || _joinCode.isEmpty || _isGameComplete || _interventionCode != null) {
+      return;
+    }
     try {
       final snap = await fetchGameSession(joinCode: _joinCode);
       if (!mounted) return;
@@ -126,21 +151,39 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       final sessionEnded = newCard == null && _isLastRoundCard(_currentCard);
 
       setState(() {
-        if (newCard != null) {
-          _currentCard = newCard;
-        }
+        final oldCard = _currentCard;
         _allVotesIn = snap.allVotesIn;
+        _areVotesLocked = snap.areVotesLocked;
         _votes = snap.votes;
         if (snap.players.isNotEmpty) _players = snap.players;
 
-        if (cardChanged) {
-          _lastCardId = newCard.id;
-          _resetForNewCard();
-          if (_isLastRoundCard(newCard) && newCard.options.isEmpty) {
-            _enterGameWon();
+        if (cardChanged && _interventionCode == null) {
+          final intervention = _interventionForCardTransition(oldCard, newCard);
+          final assetPath = interventionImageAssetPath(intervention);
+          if (intervention != null && assetPath != null) {
+            _interventionCode = intervention;
+            _pendingNextCard = newCard;
+            _pendingEndGame = false;
+            _lastCardId = newCard.id;
+            _submittingChoose = false;
+            _submittingVote = false;
+          } else {
+            _currentCard = newCard;
+            _lastCardId = newCard.id;
+            _resetForNewCard();
+            if (_isLastRoundCard(newCard) && newCard.options.isEmpty) {
+              _enterGameWon();
+            }
           }
         } else if (sessionEnded) {
           _enterGameWon();
+        } else if (newCard != null && _interventionCode == null) {
+          _currentCard = newCard;
+        }
+
+        if (snap.areVotesLocked && _interventionCode == null && !_isGameComplete) {
+          _submittingChoose = false;
+          _phase = _GamePhase.results;
         }
       });
 
@@ -156,6 +199,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _submittingVote = false;
     _submittingChoose = false;
     _votes = const <int, int>{};
+    _areVotesLocked = false;
     _debateTimer?.cancel();
   }
 
@@ -184,7 +228,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   Future<void> _submitVote(int cardOptionId) async {
     final player = _selfPlayer;
-    if (player == null || _joinCode.isEmpty) return;
+    if (player == null || _joinCode.isEmpty || _areVotesLocked) return;
     setState(() {
       _selectedOptionId = cardOptionId;
       _submittingVote = true;
@@ -201,9 +245,9 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         _allVotesIn = snap.allVotesIn;
         _votes = snap.votes;
         if (snap.players.isNotEmpty) _players = snap.players;
-        _phase = snap.allVotesIn
-            ? (_isHost ? _GamePhase.results : _GamePhase.waitingForHost)
-            : _GamePhase.waitingForVotes;
+        // Players stay in the choosing phase so they can keep switching their
+        // answer until the host locks the answers in.
+        _phase = _GamePhase.choosing;
       });
     } catch (e) {
       if (!mounted) return;
@@ -211,6 +255,32 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         _submittingVote = false;
         _selectedOptionId = null;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _lockInAnswers() async {
+    final player = _selfPlayer;
+    if (player == null || !_isHost || _joinCode.isEmpty) return;
+    setState(() => _submittingChoose = true);
+    try {
+      final snap = await lockGameSessionVotes(
+        joinCode: _joinCode,
+        playerId: player.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _votes = snap.votes;
+        _areVotesLocked = snap.areVotesLocked;
+        if (snap.players.isNotEmpty) _players = snap.players;
+        _submittingChoose = false;
+        _phase = _GamePhase.results;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submittingChoose = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
@@ -255,6 +325,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   Future<void> _submitChoose(int cardOptionId) async {
     final player = _selfPlayer;
     if (player == null || _joinCode.isEmpty) return;
+    final intervention = _interventionForOptionId(cardOptionId);
     setState(() => _submittingChoose = true);
     try {
       final snap = await chooseCardOption(
@@ -264,7 +335,19 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       );
       if (!mounted) return;
       final newCard = snap.currentCard;
-      if (newCard == null && _isLastRoundCard(_currentCard)) {
+      final endGame = newCard == null && _isLastRoundCard(_currentCard);
+      final assetPath = interventionImageAssetPath(intervention);
+      if (intervention != null && assetPath != null) {
+        _showInterventionThenAdvance(
+          interventionCode: intervention,
+          nextCard: newCard,
+          endGame: endGame,
+          allVotesIn: snap.allVotesIn,
+          votes: snap.votes,
+        );
+        return;
+      }
+      if (endGame) {
         setState(_enterGameWon);
         return;
       }
@@ -330,152 +413,295 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   List<CardOptionSnapshot> get _options => _currentCard?.options ?? [];
 
-  String? _voteCountLabel(int optionId) {
-    if (!_allVotesIn) return null;
-    final total = _players.length;
-    if (total == 0) return null;
-    final count = _votes.values.where((v) => v == optionId).length;
-    return '$count/$total';
+  String? _interventionForOptionId(int optionId) {
+    for (final opt in _options) {
+      if (opt.id == optionId) return opt.intervention;
+    }
+    return null;
   }
+
+  String? _interventionForCardTransition(CardSnapshot? from, CardSnapshot? to) {
+    if (from == null || to == null) return null;
+    for (final opt in from.options) {
+      if (opt.destinationCard?.id == to.id) return opt.intervention;
+    }
+    return null;
+  }
+
+  void _showInterventionThenAdvance({
+    required String interventionCode,
+    required CardSnapshot? nextCard,
+    required bool endGame,
+    bool allVotesIn = false,
+    Map<int, int> votes = const <int, int>{},
+  }) {
+    setState(() {
+      _interventionCode = interventionCode;
+      _pendingNextCard = nextCard;
+      _pendingEndGame = endGame;
+      _allVotesIn = allVotesIn;
+      _votes = votes;
+      _submittingChoose = false;
+      _submittingVote = false;
+      if (nextCard != null) _lastCardId = nextCard.id;
+    });
+  }
+
+  void _completeIntervention() {
+    final nextCard = _pendingNextCard;
+    final endGame = _pendingEndGame;
+    setState(() {
+      _interventionCode = null;
+      _pendingNextCard = null;
+      _pendingEndGame = false;
+      if (endGame) {
+        _enterGameWon();
+        return;
+      }
+      _currentCard = nextCard;
+      if (nextCard != null) _lastCardId = nextCard.id;
+      _resetForNewCard();
+      if (_isLastRoundCard(nextCard) && (nextCard?.options.isEmpty ?? true)) {
+        _enterGameWon();
+      }
+    });
+  }
+
+  int _voteCountFor(int optionId) =>
+      _votes.values.where((v) => v == optionId).length;
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    final showBack = widget.session == null;
+
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: _kStoryNavy,
-        body: Stack(
-          children: [
-            SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.session == null)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        color: Colors.white,
-                        tooltip: MaterialLocalizations.of(context)
-                            .backButtonTooltip,
-                      ),
-                    ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                      child: Center(
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-                          decoration: BoxDecoration(
-                            color: _kStoryCardBeige,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+        backgroundColor: _kNavyDeep,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final h = constraints.maxHeight;
+
+            return Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: h * 0.34,
+                  child: ClipPath(
+                    clipper: const _WedgeClipper(0.84),
+                    child: Container(color: _kPink),
+                  ),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(height: showBack ? 52 : 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 _sceneTitle,
-                                textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: _kStoryPink,
-                                  height: 1.25,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1,
+                                  height: 0.95,
+                                  color: Colors.white,
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              Text(
-                                _situationText,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  height: 1.45,
-                                  color: Colors.black.withValues(alpha: 0.98),
-                                ),
-                              ),
-                              if (_isGameComplete) ...[
-                                const SizedBox(height: 16),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _kStoryPink,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.emoji_events_rounded,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          'Gefeliciteerd! Jullie hebben het verhaal voltooid.',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            height: 1.35,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              _buildSituationCard(),
+                              if (_interventionCode != null) ...[
+                                const SizedBox(height: 20),
+                                _buildInterventionShowcase(),
                               ],
                             ],
                           ),
                         ),
                       ),
+                      _buildBottomPanel(context),
+                    ],
+                  ),
+                ),
+                if (showBack)
+                  Positioned(
+                    top: topPad + 12,
+                    left: 20,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).maybePop(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  _buildBottomPanel(context),
+                if (_phase == _GamePhase.debateIntro)
+                  SlideTransition(
+                    position: _introSlide,
+                    child: Container(
+                      color: _kNavyDeep,
+                      child: Image.asset(
+                        'assets/images/debat.png',
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSituationCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _situationText,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.45,
+              color: Colors.black.withValues(alpha: 0.92),
+            ),
+          ),
+          if (_isGameComplete) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _kPink,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.emoji_events_rounded, color: Colors.white, size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Gefeliciteerd! Jullie hebben het verhaal voltooid.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
 
-            if (_phase == _GamePhase.debateIntro)
-              SlideTransition(
-                position: _introSlide,
-                child: Container(
-                  color: _kStoryNavy,
-                  child: Image.asset(
-                    'assets/images/debat.png',
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    height: double.infinity,
+  Widget _buildInterventionShowcase() {
+    final assetPath = interventionImageAssetPath(_interventionCode);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Interventie',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: Colors.white.withValues(alpha: 0.75),
+          ),
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: assetPath == null
+              ? Container(
+                  height: 160,
+                  color: Colors.white.withValues(alpha: 0.08),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Interventiekaart niet gevonden',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              : Image.asset(
+                  assetPath,
+                  fit: BoxFit.fitWidth,
+                  width: double.infinity,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 160,
+                    color: Colors.white.withValues(alpha: 0.08),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Interventiekaart niet gevonden',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-          ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildBottomPanel(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: _kStoryCardBeige,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: _kPanelSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
       ),
       padding: EdgeInsets.fromLTRB(
+        28,
         22,
-        22,
-        22,
+        28,
         22 + MediaQuery.paddingOf(context).bottom,
       ),
-      child: switch (_phase) {
+      child: _interventionCode != null
+          ? _buildInterventionContinuePanel()
+          : switch (_phase) {
         _GamePhase.choosing || _GamePhase.debateIntro => _buildChoosingPanel(),
         _GamePhase.waitingForVotes => _buildWaitingPanel(),
         _GamePhase.results => _buildResultsPanel(),
@@ -492,6 +718,46 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           child: _buildFinalResultPanel(),
         ),
       },
+    );
+  }
+
+  Widget _buildInterventionContinuePanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Lees de interventiekaart',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Bespreek de kaart met de groep. Ga daarna door naar de volgende situatie.',
+          style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+        ),
+        const SizedBox(height: 18),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _completeIntervention,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kPink,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Text(
+              'Ga verder',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -525,9 +791,56 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           if (i > 0) const SizedBox(height: 12),
           _StoryChoiceButton(
             label: opts[i].optionText,
-            isSelected: false,
-            isDisabled: _submittingVote,
-            onPressed: _submittingVote ? null : () => _submitVote(opts[i].id),
+            isSelected: opts[i].id == _selectedOptionId,
+            isDisabled: _submittingVote && opts[i].id != _selectedOptionId,
+            onPressed: (_submittingVote || _submittingChoose)
+                ? null
+                : () => _submitVote(opts[i].id),
+          ),
+        ],
+        const SizedBox(height: 18),
+        if (_isHost && !_areVotesLocked)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _submittingChoose ? null : _lockInAnswers,
+              icon: const Icon(Icons.lock_rounded, size: 20),
+              label: const Text(
+                'ANTWOORDEN VERGRENDELEN',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kNavyDeep,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: _kNavyDeep.withValues(alpha: 0.3),
+                disabledForegroundColor: Colors.white70,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          )
+        else
+          Text(
+            _selectedOptionId == null
+                ? 'Kies een antwoord. Je kunt nog wisselen tot de host vergrendelt.'
+                : 'Je kunt je antwoord nog wijzigen tot de host vergrendelt.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+          ),
+        if (_submittingChoose) ...[
+          const SizedBox(height: 16),
+          const Center(
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
+            ),
           ),
         ],
       ],
@@ -562,7 +875,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           child: SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: _kStoryPink),
+            child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
           ),
         ),
       ],
@@ -573,53 +886,44 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     if (_isGameComplete) return _buildFinalResultPanel();
     final opts = _options;
     final onLastRound = _isLastRoundCard(_currentCard);
+    final voteTotal = _players.isEmpty ? _votes.length : _players.length;
+    final showVoteCounts = _areVotesLocked && voteTotal > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Alle stemmen zijn binnen!',
+          'Antwoorden vergrendeld!',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
         ),
         const SizedBox(height: 16),
-        if (_isHost) ...[
-          Text(
-            onLastRound
-                ? 'Kies de afsluiting — daarna is het verhaal klaar:'
-                : 'Kies welke optie de groep volgt:',
-            style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+        Text(
+          _isHost
+              ? (onLastRound
+                  ? 'Kies de afsluiting — daarna is het verhaal klaar:'
+                  : 'Kies welke optie de groep volgt:')
+              : 'De host kiest nu welke optie de groep volgt.',
+          style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        for (var i = 0; i < opts.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          _StoryChoiceButton(
+            label: opts[i].optionText,
+            isSelected: false,
+            isDisabled: !_isHost || _submittingChoose,
+            voteCount: showVoteCounts ? _voteCountFor(opts[i].id) : null,
+            voteTotal: showVoteCounts ? voteTotal : null,
+            onPressed:
+                !_isHost || _submittingChoose ? null : () => _submitChoose(opts[i].id),
           ),
-          const SizedBox(height: 16),
-          for (var i = 0; i < opts.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            _StoryChoiceButton(
-              label: opts[i].optionText,
-              isSelected: false,
-              isDisabled: _submittingChoose,
-              voteCountLabel: _voteCountLabel(opts[i].id),
-              onPressed: _submittingChoose ? null : () => _submitChoose(opts[i].id),
-            ),
-          ],
-          if (_submittingChoose) ...[
-            const SizedBox(height: 16),
-            const Center(
-              child: SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: _kStoryPink),
-              ),
-            ),
-          ],
-        ] else ...[
-          const Text(
-            'Wachten tot de host een keuze maakt...',
-            style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
-          ),
+        ],
+        if (_submittingChoose || !_isHost) ...[
           const SizedBox(height: 16),
           const Center(
             child: SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kStoryPink),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
             ),
           ),
         ],
@@ -652,7 +956,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           icon: Icons.thumb_up_rounded,
           isSelected: _debateVoteChoice == true,
           isDisabled: voted && _debateVoteChoice != true,
-          color: _kStoryNavy,
+          color: _kNavyDeep,
           onPressed: voted ? null : () => setState(() => _debateVoteChoice = true),
         ),
         const SizedBox(height: 12),
@@ -669,7 +973,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           ElevatedButton(
             onPressed: () => setState(() => _phase = _GamePhase.debateVoteResult),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _kStoryPink,
+              backgroundColor: _kPink,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -720,7 +1024,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               ? _startDebate
               : () => setState(() => _phase = _GamePhase.revote),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _kStoryPink,
+            backgroundColor: _kPink,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -755,7 +1059,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: _kStoryPink,
+                      color: _kPink,
                       letterSpacing: 1,
                     ),
                   ),
@@ -779,7 +1083,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                     strokeWidth: 5,
                     backgroundColor: Colors.black12,
                     valueColor: AlwaysStoppedAnimation(
-                      _timerSeconds <= 10 ? Colors.red : _kStoryNavy,
+                      _timerSeconds <= 10 ? Colors.red : _kNavyDeep,
                     ),
                   ),
                   Center(
@@ -788,7 +1092,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: _timerSeconds <= 10 ? Colors.red : _kStoryNavy,
+                        color: _timerSeconds <= 10 ? Colors.red : _kNavyDeep,
                       ),
                     ),
                   ),
@@ -875,7 +1179,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
             child: SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kStoryPink),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
             ),
           ),
         ],
@@ -885,12 +1189,16 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   Widget _buildWaitingForHostPanel() {
     if (_isGameComplete) return _buildFinalResultPanel();
+    final voteTotal = _areVotesLocked
+        ? (_players.isEmpty ? _votes.length : _players.length)
+        : null;
+    final showVoteCounts = _areVotesLocked && (voteTotal ?? 0) > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Alle stemmen zijn binnen!',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        Text(
+          _areVotesLocked ? 'Antwoorden vergrendeld!' : 'Alle stemmen zijn binnen!',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -905,7 +1213,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               label: opt.optionText,
               isSelected: false,
               isDisabled: true,
-              voteCountLabel: _voteCountLabel(opt.id),
+              voteCount: showVoteCounts ? _voteCountFor(opt.id) : null,
+              voteTotal: showVoteCounts ? voteTotal : null,
               onPressed: null,
             ),
           ),
@@ -913,7 +1222,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           child: SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: _kStoryPink),
+            child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
           ),
         ),
       ],
@@ -932,7 +1241,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
             const Icon(
               Icons.emoji_events_rounded,
               size: 52,
-              color: _kStoryPink,
+              color: _kPink,
             ),
             const SizedBox(height: 20),
             const Text(
@@ -960,7 +1269,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               child: ElevatedButton(
                 onPressed: _returnToSituationChoosing,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kStoryPink,
+                  backgroundColor: _kPink,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -1017,7 +1326,7 @@ class _DebateVoteButton extends StatelessWidget {
               color: isSelected ? color : color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? _kStorySelectedBorder : color.withValues(alpha: 0.4),
+                color: isSelected ? _kSelectedBorder : color.withValues(alpha: 0.4),
                 width: isSelected ? 3 : 1.5,
               ),
             ),
@@ -1036,7 +1345,7 @@ class _DebateVoteButton extends StatelessWidget {
                 ),
                 if (isSelected) ...[
                   const SizedBox(width: 8),
-                  const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 20),
+                  const Icon(Icons.check_circle, color: _kSelectedBorder, size: 20),
                 ],
               ],
             ),
@@ -1053,14 +1362,16 @@ class _StoryChoiceButton extends StatelessWidget {
     required this.isSelected,
     required this.isDisabled,
     required this.onPressed,
-    this.voteCountLabel,
+    this.voteCount,
+    this.voteTotal,
   });
 
   final String label;
   final bool isSelected;
   final bool isDisabled;
   final VoidCallback? onPressed;
-  final String? voteCountLabel;
+  final int? voteCount;
+  final int? voteTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -1075,10 +1386,10 @@ class _StoryChoiceButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: _kStoryPink,
+              color: _kPink,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
-                  ? Border.all(color: _kStorySelectedBorder, width: 3)
+                  ? Border.all(color: _kSelectedBorder, width: 3)
                   : null,
             ),
             child: ConstrainedBox(
@@ -1103,29 +1414,47 @@ class _StoryChoiceButton extends StatelessWidget {
                         ),
                         if (isSelected) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.check_circle, color: _kStorySelectedBorder, size: 22),
+                          const Icon(Icons.check_circle, color: _kSelectedBorder, size: 22),
                         ],
                       ],
                     ),
                   ),
-                  if (voteCountLabel != null)
+                  if (voteCount != null && voteTotal != null)
                     Positioned(
                       top: 8,
-                      right: 12,
+                      right: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          voteCountLabel!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            height: 1.0,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.person,  
+                              size: 16,
+                              color: _kNavyDeep,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$voteCount/$voteTotal',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: _kNavyDeep,
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

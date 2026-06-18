@@ -121,6 +121,18 @@ Uri gameSessionChooseUri(String joinCode) {
   );
 }
 
+Uri gameSessionLockVotesUri(String joinCode) {
+  final root = _gamesessionsBaseUri();
+  return root.replace(
+    pathSegments: <String>[
+      ...root.pathSegments,
+      joinCode.trim(),
+      'lock',
+      'votes',
+    ],
+  );
+}
+
 int? _intFromJson(dynamic v) {
   if (v is int) return v;
   if (v is num) return v.toInt();
@@ -210,11 +222,14 @@ class CardOptionSnapshot {
   const CardOptionSnapshot({
     required this.id,
     required this.optionText,
+    this.intervention,
     this.destinationCard,
   });
 
   final int id;
   final String optionText;
+
+  final String? intervention;
   final CardSnapshot? destinationCard;
 }
 
@@ -223,14 +238,12 @@ class CardSnapshot {
     required this.id,
     required this.title,
     required this.situation,
-    this.intervention,
     this.options = const <CardOptionSnapshot>[],
   });
 
   final int id;
   final String title;
   final String situation;
-  final String? intervention;
   final List<CardOptionSnapshot> options;
 
   bool get isLastRound {
@@ -267,6 +280,7 @@ class GameSessionStarted {
     required this.players,
     this.currentCard,
     required this.allVotesIn,
+    this.areVotesLocked = false,
     this.votes = const <int, int>{},
   });
 
@@ -277,6 +291,7 @@ class GameSessionStarted {
   final List<GameSessionPlayer> players;
   final CardSnapshot? currentCard;
   final bool allVotesIn;
+  final bool areVotesLocked;
 
   /// Map of playerId -> cardOptionId for the current voting round.
   final Map<int, int> votes;
@@ -292,6 +307,7 @@ class GameSessionSnapshot {
     this.currentStory,
     this.currentCard,
     required this.allVotesIn,
+    this.areVotesLocked = false,
     this.votes = const <int, int>{},
   });
 
@@ -302,6 +318,7 @@ class GameSessionSnapshot {
   final GameSessionStorySnapshot? currentStory;
   final CardSnapshot? currentCard;
   final bool allVotesIn;
+  final bool areVotesLocked;
 
   /// Map of playerId -> cardOptionId for the current voting round.
   final Map<int, int> votes;
@@ -317,6 +334,7 @@ class GameSessionSnapshot {
       players: players,
       currentCard: currentCard,
       allVotesIn: allVotesIn,
+      areVotesLocked: areVotesLocked,
       votes: votes,
     );
   }
@@ -370,14 +388,27 @@ CardSnapshot? _cardSnapshotFromJsonNullable(dynamic raw) {
       if (parsed != null) options.add(parsed);
     }
   }
-  final intervention = m['intervention'];
   return CardSnapshot(
     id: id,
     title: title.trim(),
     situation: situation.trim(),
-    intervention: intervention is String ? intervention.trim() : null,
     options: options,
   );
+}
+
+String? _interventionCodeFromJson(dynamic raw) {
+  if (raw is String) {
+    final code = raw.trim();
+    return code.isEmpty ? null : code;
+  }
+  if (raw is Map) {
+    final m = Map<String, dynamic>.from(raw);
+    for (final key in <String>['name', 'code', 'id']) {
+      final v = m[key];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+  }
+  return null;
 }
 
 CardOptionSnapshot? _cardOptionSnapshotFromJsonNullable(dynamic raw) {
@@ -390,8 +421,15 @@ CardOptionSnapshot? _cardOptionSnapshotFromJsonNullable(dynamic raw) {
   return CardOptionSnapshot(
     id: id,
     optionText: optionText.trim(),
+    intervention: _interventionCodeFromJson(m['intervention']),
     destinationCard: destCard,
   );
+}
+
+String? interventionImageAssetPath(String? interventionCode) {
+  final code = interventionCode?.trim();
+  if (code == null || code.isEmpty) return null;
+  return 'assets/images/interventions/$code.jpeg';
 }
 
 GameSessionSnapshot _gameSessionSnapshotFromJson(
@@ -411,7 +449,7 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
   final story = _currentStorySnapshotFromJsonNullable(decoded);
   final allVotesIn = decoded['allVotesIn'] == true;
   final card = _cardSnapshotFromJsonNullable(decoded['currentCard']);
-  final votes = _votesFromJson(decoded['votingRound']);
+  final votingRound = _votingRoundFromJson(decoded['votingRound']);
   return GameSessionSnapshot(
     id: id,
     joinCode: join,
@@ -420,16 +458,38 @@ GameSessionSnapshot _gameSessionSnapshotFromJson(
     currentStory: story,
     currentCard: card,
     allVotesIn: allVotesIn,
-    votes: votes,
+    areVotesLocked: votingRound.areVotesLocked,
+    votes: votingRound.votes,
+  );
+}
+
+class _VotingRoundSnapshot {
+  const _VotingRoundSnapshot({
+    required this.votes,
+    required this.areVotesLocked,
+  });
+
+  final Map<int, int> votes;
+  final bool areVotesLocked;
+}
+
+_VotingRoundSnapshot _votingRoundFromJson(dynamic votingRoundRaw) {
+  if (votingRoundRaw is! Map) {
+    return const _VotingRoundSnapshot(
+      votes: <int, int>{},
+      areVotesLocked: false,
+    );
+  }
+  final votingRound = Map<String, dynamic>.from(votingRoundRaw);
+  return _VotingRoundSnapshot(
+    votes: _votesMapFromJson(votingRound['votes']),
+    areVotesLocked: votingRound['areVotesLocked'] == true,
   );
 }
 
 /// Parses `votingRound.votes` (a `{playerId: cardOptionId}` map) into
 /// `Map<int, int>`. Returns an empty map when missing or malformed.
-Map<int, int> _votesFromJson(dynamic votingRoundRaw) {
-  if (votingRoundRaw is! Map) return const <int, int>{};
-  final votingRound = Map<String, dynamic>.from(votingRoundRaw);
-  final votesRaw = votingRound['votes'];
+Map<int, int> _votesMapFromJson(dynamic votesRaw) {
   if (votesRaw is! Map) return const <int, int>{};
   final out = <int, int>{};
   votesRaw.forEach((key, value) {
@@ -512,6 +572,35 @@ Future<GameSessionSnapshot> fetchGameSession({required String joinCode}) async {
   }
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw Exception('Sessie ophalen mislukt (${response.statusCode})');
+  }
+  final decoded = jsonDecode(response.body);
+  if (decoded is! Map<String, dynamic>) {
+    throw Exception('Ongeldig antwoord van de server');
+  }
+  return _gameSessionSnapshotFromJson(decoded, fallbackJoinCode: code);
+}
+
+Future<GameSessionSnapshot> lockGameSessionVotes({
+  required String joinCode,
+  required int playerId,
+}) async {
+  final code = joinCode.trim().toUpperCase();
+  if (code.isEmpty) {
+    throw Exception('Geen spelcode');
+  }
+  final uri = gameSessionLockVotesUri(code);
+  final response = await http.post(
+    uri,
+    headers: const {
+      'Accept': '*/*',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'playerId': playerId,
+    }),
+  );
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('Antwoorden vergrendelen mislukt (${response.statusCode})');
   }
   final decoded = jsonDecode(response.body);
   if (decoded is! Map<String, dynamic>) {
