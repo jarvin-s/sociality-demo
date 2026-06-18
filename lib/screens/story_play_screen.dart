@@ -71,6 +71,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
   bool _allVotesIn = false;
   int? _lastCardId;
   Map<int, int> _votes = const <int, int>{};
+  bool _areVotesLocked = false;
 
   String? _interventionCode;
   CardSnapshot? _pendingNextCard;
@@ -113,9 +114,12 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _lastCardId = _currentCard?.id;
     _players = widget.session?.players ?? const [];
     _votes = widget.session?.votes ?? const <int, int>{};
+    _areVotesLocked = widget.session?.areVotesLocked ?? false;
 
     if (_isLastRoundCard(_currentCard) && (_currentCard?.options.isEmpty ?? true)) {
       _phase = _GamePhase.finalResult;
+    } else if (_areVotesLocked) {
+      _phase = _GamePhase.results;
     }
 
     _loadIdentityAndStartPolling();
@@ -149,6 +153,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
       setState(() {
         final oldCard = _currentCard;
         _allVotesIn = snap.allVotesIn;
+        _areVotesLocked = snap.areVotesLocked;
         _votes = snap.votes;
         if (snap.players.isNotEmpty) _players = snap.players;
 
@@ -175,6 +180,11 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         } else if (newCard != null && _interventionCode == null) {
           _currentCard = newCard;
         }
+
+        if (snap.areVotesLocked && _interventionCode == null && !_isGameComplete) {
+          _submittingChoose = false;
+          _phase = _GamePhase.results;
+        }
       });
 
       _handlePhaseTransitions();
@@ -189,6 +199,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     _submittingVote = false;
     _submittingChoose = false;
     _votes = const <int, int>{};
+    _areVotesLocked = false;
     _debateTimer?.cancel();
   }
 
@@ -217,7 +228,7 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   Future<void> _submitVote(int cardOptionId) async {
     final player = _selfPlayer;
-    if (player == null || _joinCode.isEmpty) return;
+    if (player == null || _joinCode.isEmpty || _areVotesLocked) return;
     setState(() {
       _selectedOptionId = cardOptionId;
       _submittingVote = true;
@@ -234,9 +245,9 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         _allVotesIn = snap.allVotesIn;
         _votes = snap.votes;
         if (snap.players.isNotEmpty) _players = snap.players;
-        _phase = snap.allVotesIn
-            ? (_isHost ? _GamePhase.results : _GamePhase.waitingForHost)
-            : _GamePhase.waitingForVotes;
+        // Players stay in the choosing phase so they can keep switching their
+        // answer until the host locks the answers in.
+        _phase = _GamePhase.choosing;
       });
     } catch (e) {
       if (!mounted) return;
@@ -244,6 +255,32 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
         _submittingVote = false;
         _selectedOptionId = null;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _lockInAnswers() async {
+    final player = _selfPlayer;
+    if (player == null || !_isHost || _joinCode.isEmpty) return;
+    setState(() => _submittingChoose = true);
+    try {
+      final snap = await lockGameSessionVotes(
+        joinCode: _joinCode,
+        playerId: player.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _votes = snap.votes;
+        _areVotesLocked = snap.areVotesLocked;
+        if (snap.players.isNotEmpty) _players = snap.players;
+        _submittingChoose = false;
+        _phase = _GamePhase.results;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submittingChoose = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
@@ -430,13 +467,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     });
   }
 
-  String? _voteCountLabel(int optionId) {
-    if (!_allVotesIn) return null;
-    final total = _players.length;
-    if (total == 0) return null;
-    final count = _votes.values.where((v) => v == optionId).length;
-    return '$count/$total';
-  }
+  int _voteCountFor(int optionId) =>
+      _votes.values.where((v) => v == optionId).length;
 
   @override
   Widget build(BuildContext context) {
@@ -759,9 +791,56 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
           if (i > 0) const SizedBox(height: 12),
           _StoryChoiceButton(
             label: opts[i].optionText,
-            isSelected: false,
-            isDisabled: _submittingVote,
-            onPressed: _submittingVote ? null : () => _submitVote(opts[i].id),
+            isSelected: opts[i].id == _selectedOptionId,
+            isDisabled: _submittingVote && opts[i].id != _selectedOptionId,
+            onPressed: (_submittingVote || _submittingChoose)
+                ? null
+                : () => _submitVote(opts[i].id),
+          ),
+        ],
+        const SizedBox(height: 18),
+        if (_isHost && !_areVotesLocked)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _submittingChoose ? null : _lockInAnswers,
+              icon: const Icon(Icons.lock_rounded, size: 20),
+              label: const Text(
+                'ANTWOORDEN VERGRENDELEN',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kNavyDeep,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: _kNavyDeep.withValues(alpha: 0.3),
+                disabledForegroundColor: Colors.white70,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          )
+        else
+          Text(
+            _selectedOptionId == null
+                ? 'Kies een antwoord. Je kunt nog wisselen tot de host vergrendelt.'
+                : 'Je kunt je antwoord nog wijzigen tot de host vergrendelt.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+          ),
+        if (_submittingChoose) ...[
+          const SizedBox(height: 16),
+          const Center(
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
+            ),
           ),
         ],
       ],
@@ -807,47 +886,38 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
     if (_isGameComplete) return _buildFinalResultPanel();
     final opts = _options;
     final onLastRound = _isLastRoundCard(_currentCard);
+    final voteTotal = _players.isEmpty ? _votes.length : _players.length;
+    final showVoteCounts = _areVotesLocked && voteTotal > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Alle stemmen zijn binnen!',
+          'Antwoorden vergrendeld!',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
         ),
         const SizedBox(height: 16),
-        if (_isHost) ...[
-          Text(
-            onLastRound
-                ? 'Kies de afsluiting — daarna is het verhaal klaar:'
-                : 'Kies welke optie de groep volgt:',
-            style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+        Text(
+          _isHost
+              ? (onLastRound
+                  ? 'Kies de afsluiting — daarna is het verhaal klaar:'
+                  : 'Kies welke optie de groep volgt:')
+              : 'De host kiest nu welke optie de groep volgt.',
+          style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        for (var i = 0; i < opts.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          _StoryChoiceButton(
+            label: opts[i].optionText,
+            isSelected: false,
+            isDisabled: !_isHost || _submittingChoose,
+            voteCount: showVoteCounts ? _voteCountFor(opts[i].id) : null,
+            voteTotal: showVoteCounts ? voteTotal : null,
+            onPressed:
+                !_isHost || _submittingChoose ? null : () => _submitChoose(opts[i].id),
           ),
-          const SizedBox(height: 16),
-          for (var i = 0; i < opts.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            _StoryChoiceButton(
-              label: opts[i].optionText,
-              isSelected: false,
-              isDisabled: _submittingChoose,
-              voteCountLabel: _voteCountLabel(opts[i].id),
-              onPressed: _submittingChoose ? null : () => _submitChoose(opts[i].id),
-            ),
-          ],
-          if (_submittingChoose) ...[
-            const SizedBox(height: 16),
-            const Center(
-              child: SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: _kPink),
-              ),
-            ),
-          ],
-        ] else ...[
-          const Text(
-            'Wachten tot de host een keuze maakt...',
-            style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
-          ),
+        ],
+        if (_submittingChoose || !_isHost) ...[
           const SizedBox(height: 16),
           const Center(
             child: SizedBox(
@@ -1119,12 +1189,16 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
 
   Widget _buildWaitingForHostPanel() {
     if (_isGameComplete) return _buildFinalResultPanel();
+    final voteTotal = _areVotesLocked
+        ? (_players.isEmpty ? _votes.length : _players.length)
+        : null;
+    final showVoteCounts = _areVotesLocked && (voteTotal ?? 0) > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Alle stemmen zijn binnen!',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        Text(
+          _areVotesLocked ? 'Antwoorden vergrendeld!' : 'Alle stemmen zijn binnen!',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -1139,7 +1213,8 @@ class _StoryPlayScreenState extends State<StoryPlayScreen>
               label: opt.optionText,
               isSelected: false,
               isDisabled: true,
-              voteCountLabel: _voteCountLabel(opt.id),
+              voteCount: showVoteCounts ? _voteCountFor(opt.id) : null,
+              voteTotal: showVoteCounts ? voteTotal : null,
               onPressed: null,
             ),
           ),
@@ -1287,14 +1362,16 @@ class _StoryChoiceButton extends StatelessWidget {
     required this.isSelected,
     required this.isDisabled,
     required this.onPressed,
-    this.voteCountLabel,
+    this.voteCount,
+    this.voteTotal,
   });
 
   final String label;
   final bool isSelected;
   final bool isDisabled;
   final VoidCallback? onPressed;
-  final String? voteCountLabel;
+  final int? voteCount;
+  final int? voteTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -1342,24 +1419,42 @@ class _StoryChoiceButton extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (voteCountLabel != null)
+                  if (voteCount != null && voteTotal != null)
                     Positioned(
                       top: 8,
-                      right: 12,
+                      right: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          voteCountLabel!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            height: 1.0,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.person,  
+                              size: 16,
+                              color: _kNavyDeep,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$voteCount/$voteTotal',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: _kNavyDeep,
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
