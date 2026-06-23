@@ -39,6 +39,7 @@ class _JoinScreenState extends State<JoinScreen>
   bool _isScanning = false;
   bool _hasScanned = false;
   bool _joinBusy = false;
+  bool _settingCodeFromScan = false;
 
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
@@ -67,6 +68,8 @@ class _JoinScreenState extends State<JoinScreen>
   }
 
   Future<void> _attemptJoin({String? scannedPayload}) async {
+    if (_joinBusy) return;
+
     final raw = scannedPayload ?? _codeController.text;
     final code = parseJoinCodeFromQrOrText(raw);
     if (code == null || !isValidJoinCodeFormat(code)) {
@@ -188,7 +191,9 @@ class _JoinScreenState extends State<JoinScreen>
                         _JoinCodeBoxes(
                           controller: _codeController,
                           onCompleted: () {
-                            if (!_joinBusy) _attemptJoin();
+                            if (!_joinBusy && !_settingCodeFromScan) {
+                              _attemptJoin();
+                            }
                           },
                         ),
 
@@ -226,11 +231,13 @@ class _JoinScreenState extends State<JoinScreen>
                                     );
                                     return;
                                   }
+                                  _settingCodeFromScan = true;
                                   setState(() {
                                     _hasScanned = true;
                                     _isScanning = false;
                                     _codeController.text = parsed;
                                   });
+                                  _settingCodeFromScan = false;
                                   _attemptJoin(scannedPayload: raw);
                                 },
                               ),
