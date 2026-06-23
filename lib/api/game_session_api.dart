@@ -34,26 +34,6 @@ String normalizeJoinCodeTyping(String raw) {
   return buf.toString();
 }
 
-String? _joinCodeFromQueryParameters(Map<String, String> params) {
-  final q = params['code']?.trim();
-  if (q == null || q.isEmpty) return null;
-  final fromQuery = normalizeJoinCodeTyping(q);
-  return fromQuery.length == 6 ? fromQuery : null;
-}
-
-String? _joinCodeFromUri(Uri uri) {
-  final fromQuery = _joinCodeFromQueryParameters(uri.queryParameters);
-  if (fromQuery != null) return fromQuery;
-
-  if (uri.fragment.isEmpty) return null;
-  final fragment = uri.fragment.startsWith('/')
-      ? uri.fragment
-      : '/${uri.fragment}';
-  final fragmentUri = Uri.tryParse(fragment);
-  if (fragmentUri == null) return null;
-  return _joinCodeFromQueryParameters(fragmentUri.queryParameters);
-}
-
 /// Base URL for join deep links shown in host QR codes.
 String webAppBaseUrl() {
   const fromEnv = String.fromEnvironment('WEB_APP_URL');
@@ -65,28 +45,15 @@ String webAppBaseUrl() {
   return _kDefaultWebAppBaseUrl;
 }
 
-/// QR / camera deep link: `https://…/#/join?code=ABC123`
-Uri buildJoinDeepLink(String joinCode) {
-  return Uri.parse(webAppBaseUrl()).replace(
-    fragment: '/join?code=${joinCode.trim()}',
-  );
+/// QR / camera deep link: `https://…/#/join`
+Uri buildJoinDeepLink() {
+  return Uri.parse(webAppBaseUrl()).replace(fragment: '/join');
 }
 
-/// Join code from the current browser URL (path or hash query string).
-String? webJoinCodeFromCurrentUri() {
-  if (!kIsWeb) return null;
-  return _joinCodeFromUri(Uri.base);
-}
-
-/// Parses a QR payload (`https://…/#/join?code=ABC123`) or raw code string.
+/// Parses a raw 6-character join code string.
 String? parseJoinCodeFromQrOrText(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return null;
-  final uri = Uri.tryParse(trimmed);
-  if (uri != null) {
-    final fromUri = _joinCodeFromUri(uri);
-    if (fromUri != null) return fromUri;
-  }
   final normalized = normalizeJoinCodeTyping(trimmed);
   return normalized.length == 6 ? normalized : null;
 }

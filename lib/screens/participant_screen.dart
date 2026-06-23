@@ -156,7 +156,7 @@ class _ParticipantScreenState extends State<ParticipantScreen>
     }
   }
 
-  String get _joinQrPayload => buildJoinDeepLink(_gameCode ?? '').toString();
+  String get _joinQrPayload => buildJoinDeepLink().toString();
 
   @override
   Widget build(BuildContext context) {

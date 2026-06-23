@@ -34,12 +34,10 @@
 </head>
 <body>
   <script>
-    // Camera apps open /join?code=… as a path URL; Flutter web uses hash routes.
+    // Camera apps open /join as a path URL; Flutter web uses hash routes.
     (function () {
-      var path = window.location.pathname;
-      var search = window.location.search;
-      if (path === '/join' && !window.location.hash) {
-        window.location.replace('/#' + path + search);
+      if (window.location.pathname === '/join' && !window.location.hash) {
+        window.location.replace('/#/join');
       }
     })();
   </script>
