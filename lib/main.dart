@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sociality/api/game_session_api.dart';
 import 'package:sociality/screens/home_screen.dart';
 import 'package:sociality/screens/join_screen.dart';
 import 'firebase_options.dart';
@@ -47,9 +48,7 @@ class SocialityApp extends StatelessWidget {
           // Join screen
           case '/join':
             page = JoinScreen(
-              initialJoinCode: kIsWeb
-                  ? Uri.base.queryParameters['code']
-                  : null,
+              initialJoinCode: kIsWeb ? webJoinCodeFromCurrentUri() : null,
             );
 
           // Overview screen

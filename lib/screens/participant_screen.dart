@@ -156,8 +156,7 @@ class _ParticipantScreenState extends State<ParticipantScreen>
     }
   }
 
-  String get _joinQrPayload =>
-      'https://sociality-demo.vercel.app/join?code=${_gameCode ?? ''}';
+  String get _joinQrPayload => buildJoinDeepLink(_gameCode ?? '').toString();
 
   @override
   Widget build(BuildContext context) {
