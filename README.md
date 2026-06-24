@@ -141,11 +141,11 @@ Output: `build/web/` — deploy to any static host.
 
 ## Known Limitations & Issues
 
-- **Physical board game required** — the app cannot be used meaningfully on its own; it's a companion to the physical Sociality board game.
-- **Web QR scanning** — scanning via the browser camera is unreliable or unsupported on some devices; joining via the `?code=` deep link is the more reliable path on web.
-- **No reconnect handling** — if a player loses connection mid-session, there's currently no graceful rejoin flow.
-- **No persistence across sessions** — game state lives only for the duration of a session; there's no history or replay of past games.
-- **Story previews are limited** — only the story title is shown before starting.
+- **Physical board game required** - the app cannot be used meaningfully on its own; it's a companion to the physical Sociality board game.
+- **Web QR scanning** - scanning via the browser camera is unreliable or unsupported on some devices; joining via the `?code=` deep link is the more reliable path on web.
+- **No reconnect handling** - if a player loses connection mid-session, there's currently no graceful rejoin flow.
+- **No persistence across sessions** - game state lives only for the duration of a session; there's no history or replay of past games.
+- **Story previews are limited** - only the story title is shown before starting.
 
 ---
 
