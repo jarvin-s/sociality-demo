@@ -18,25 +18,21 @@ Built by **Laura, Jarvin, Berkan and Yousef**, took over from https://git.fhict.
 - **Host a game** - create a session and share a PIN or QR code with players
 - **Join a game** - enter a 6-character code or scan a QR code to join
 - **Interactive stories** - branching narratives with decision points per situation
-- **Real-time multiplayer** - powered by Firebase Realtime Database
+- **Real-time multiplayer** - synchronizes session and voting state across players
 - **Deep link support** - join via URL with `?code=` on web
 
-**To do**
-- **start listing** 
+**Suggestions**
+- **Real-time data (WebSocket)​**
+- **Story preview (currently only title)​**
+- **Add images to stories​**
+- **Debate & profile features​** 
 
 ---
 
 ## Tech Stack
 
-| What | How |
-|---|---|
-| Framework | Flutter |
-| Backend | UHH |
-| QR scanning | mobile_scanner |
-| QR generation | qr_flutter |
-| HTTP requests | http |
-| SVG assets | flutter_svg |
-| Sound effects | audioplayers |
+- **Framework**: Flutter
+- **Language**: Dart
 
 ---
 
@@ -61,9 +57,7 @@ sociality/
 │   │   └── welcome_screen.dart    # Introduction + features
 │   ├── services/                  # Local services (e.g. player identity)
 │   ├── widgets/                   # Shared reusable widgets
-│   ├── firebase_options.dart      # Generated Firebase config
 │   └── main.dart                  # App entry point + navigation
-├── firebase.json
 ├── pubspec.yaml
 └── README.md
 ```
@@ -75,7 +69,7 @@ sociality/
 ### Prerequisites
 
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) installed
-- A Firebase project with Realtime Database enabled
+- A configured backend endpoint for game sessions
 - Physical device or emulator (camera required for QR scanning)
 
 ### Setup
@@ -91,12 +85,9 @@ cd sociality
 flutter pub get
 ```
 
-**3. Add Firebase config**
+**3. Configure the API**
 
-Make sure `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are placed in the correct directories. The `firebase_options.dart` file should already be generated — if not, run:
-```bash
-flutterfire configure
-```
+Set the base API URL in `lib/api/api_config.dart` to point to your backend.
 
 **4. Add assets**
 
@@ -112,6 +103,63 @@ assets/sounds/click.wav
 ```bash
 flutter run
 ```
+
+---
+
+## Build & Deployment
+
+### Debug build
+```bash
+flutter run
+```
+
+### Release build (Android)
+```bash
+flutter build apk --release
+# or for Play Store
+flutter build appbundle --release
+```
+Output: `build/app/outputs/flutter-apk/` or `build/app/outputs/bundle/release/`
+
+### Release build (iOS)
+```bash
+flutter build ios --release
+```
+Then archive and upload via Xcode.
+
+### Release build (Web)
+```bash
+flutter build web --release
+```
+Output: `build/web/` — deploy to any static host.
+
+**Notes**
+- Update the version number in `pubspec.yaml` before each release build.
+- Make sure the API base URL is set correctly for the target environment (dev vs. production) before building.
+
+---
+
+## Known Limitations & Issues
+
+- **Physical board game required** — the app cannot be used meaningfully on its own; it's a companion to the physical Sociality board game.
+- **Web QR scanning** — scanning via the browser camera is unreliable or unsupported on some devices; joining via the `?code=` deep link is the more reliable path on web.
+- **No reconnect handling** — if a player loses connection mid-session, there's currently no graceful rejoin flow.
+- **No persistence across sessions** — game state lives only for the duration of a session; there's no history or replay of past games.
+- **Story previews are limited** — only the story title is shown before starting.
+
+---
+
+## Future Development
+
+- Move real-time updates to a WebSocket-based connection.
+- Add richer story previews (beyond just the title).
+- Add images to stories.
+- Add debate and profile features.
+- Add reconnect/rejoin support for dropped players.
+- Add session history so hosts can review past games.
+- Improve web platform support, particularly QR scanning.
+- Add automated tests (unit/widget) for screens and API calls.
+- Add CI/CD pipeline for automated builds and releases.
 
 ---
 
