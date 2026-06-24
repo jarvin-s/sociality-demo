@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sociality/screens/home_screen.dart';
 import 'package:sociality/screens/join_screen.dart';
@@ -45,7 +46,11 @@ class SocialityApp extends StatelessWidget {
 
           // Join screen
           case '/join':
-            page = const JoinScreen();
+            page = JoinScreen(
+              initialJoinCode: kIsWeb
+                  ? Uri.base.queryParameters['code']
+                  : null,
+            );
 
           // Overview screen
           case '/overview':

@@ -1,11 +1,8 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import 'package:sociality/api/api_config.dart';
-
-const String _kDefaultWebAppBaseUrl = 'https://sociality-demo.vercel.app';
 
 const String _kGameSessionsPath = '/api/gamesessions';
 
@@ -34,26 +31,16 @@ String normalizeJoinCodeTyping(String raw) {
   return buf.toString();
 }
 
-/// Base URL for join deep links shown in host QR codes.
-String webAppBaseUrl() {
-  const fromEnv = String.fromEnvironment('WEB_APP_URL');
-  if (fromEnv.isNotEmpty) return fromEnv;
-  if (kIsWeb) {
-    final base = Uri.base;
-    return '${base.scheme}://${base.host}${base.hasPort ? ':${base.port}' : ''}';
-  }
-  return _kDefaultWebAppBaseUrl;
-}
-
-/// QR / camera deep link: `https://…/#/join`
-Uri buildJoinDeepLink() {
-  return Uri.parse(webAppBaseUrl()).replace(fragment: '/join');
-}
-
-/// Parses a raw 6-character join code string.
+/// Parses a QR payload (`https://…/join?code=ABC123`) or raw code string.
 String? parseJoinCodeFromQrOrText(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri != null && uri.queryParameters['code'] != null) {
+    final q = uri.queryParameters['code']!.trim();
+    final fromQuery = normalizeJoinCodeTyping(q);
+    if (fromQuery.length == 6) return fromQuery;
+  }
   final normalized = normalizeJoinCodeTyping(trimmed);
   return normalized.length == 6 ? normalized : null;
 }
